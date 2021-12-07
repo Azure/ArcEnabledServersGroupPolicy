@@ -294,17 +294,22 @@ function New-ArcConnectionPoint {
     # Resolve groups to SIDs
     
     $sidList = ($SecurityGroups | % {
-        $adgroup = get-adgroup $_
+        $group = $_
+        try
+        {
+            $adgroup = get-adgroup $_
+        } catch {
+            Write-Error "Unable to resolve group $group`: $_"
+        }
         $sid = $adgroup.sid.Value
         "SID=$sid"
     })
 
     $descriptor = ($sidlist -join " OR ")
-    Write-Verbose -Message "protection descriptor $descriptor"
+    Write-Verbose -Message "Using protection descriptor $descriptor"
 
     $protectedSecret = [DpapiNgUtil]::ProtectBase64($descriptor, $ServicePrincipalSecret)
-    Write-Verbose -Message "Encoded secret $protectedSecret"
-
+ 
     $bindingParams = (@{
         "subscription-id"=$Subscription
         "tenant-id"=$Tenant
