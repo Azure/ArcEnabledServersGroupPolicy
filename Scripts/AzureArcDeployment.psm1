@@ -170,7 +170,7 @@ internal static class NativeMethods
 "@
 
 function Test-AzModule {
-    if (Get-Variable AzAvailable -Scope Script) 
+    if (Get-Variable AzAvailable -Scope Script -ErrorAction SilentlyContinue) 
     {
         return $script:AzAvailable
     }
@@ -191,7 +191,7 @@ function Get-ConnectionPointContainer {
     param()
 
     $systemcontainer = (Get-AdDomain).SystemsContainer
-    Write-Verbose "Using system container $systemscontainer"
+    Write-Verbose "Using system container $systemcontainer"
 
     $containerName = "CN=AzureArc,"+$systemcontainer
     $null = Get-ADObject -Identity $containerName # just to check the container exists, throws otherwise
@@ -274,16 +274,16 @@ function New-ArcConnectionPoint {
         [string]$ServicePrincipalSecret
     )
 
-    Write-Verbose "Creating a new Azure Arc Service Connection Point"
+    Write-Verbose -Message "Creating a new Azure Arc Service Connection Point"
 
     if(Get-ArcConnectionPoint -Name $Name) {
-        Write-Error "Service Connection Point '$Name' already exists"
+        Write-Error -Message "Service Connection Point '$Name' already exists"
     }
 
     $container = Get-ConnectionPointContainer
 
     if (Test-AzModule) {
-        Write-Verbose "Testing Service Principal $ServicePrincipal"
+        Write-Verbose -Message "Testing Service Principal $ServicePrincipal"
         $sp = Get-AzADServicePrincipal -ApplicationId $ServicePrincipal        
 
         # TODO: try to use the password to check if it is correct?
@@ -291,5 +291,34 @@ function New-ArcConnectionPoint {
         # TODO: check SP has not expired
     } 
 
+    # Resolve groups to SIDs
+    
+    $sidList = ($SecurityGroups | % {
+        $adgroup = get-adgroup $_
+        $sid = $adgroup.sid.Value
+        "SID=$sid"
+    })
 
+    $descriptor = ($sidlist -join " OR ")
+    Write-Verbose -Message "protection descriptor $descriptor"
+
+    $protectedSecret = [DpapiNgUtil]::ProtectBase64($descriptor, $ServicePrincipalSecret)
+    Write-Verbose -Message "Encoded secret $protectedSecret"
+
+    $bindingParams = (@{
+        "subscription-id"=$Subscription
+        "tenant-id"=$Tenant
+        "resource-group"=$ResourceGroup
+        "location"=$Location
+        "service-principal-id"= $ServicePrincipal
+        "service-principal-secret"=$protectedSecret
+    } | ConvertTo-Json)
+
+    New-ADObject -Name $Name -Type "serviceConnectionPoint" -Path $container -OtherAttributes @{
+        keywords="AzureArcEnabledServers"
+        serviceBindingInformation=$bindingParams
+        serviceClassName="AzureArcEnabledServers"
+    }
+
+    Write-Verbose -Message "Created Service Connection Point $Name"
 }
