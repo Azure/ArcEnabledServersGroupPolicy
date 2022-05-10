@@ -51,27 +51,33 @@ try
         exit
     }
 
+
     # Agent is not installed, proceed with installation
+    "Copying necessary items to $InstallationFolder" >> $logPath
     Copy-Item -Path "$remotePath\*" -Destination $InstallationFolder -Recurse -Verbose
 
     # Download the installation package
+    "Started downloading the installation script" >> $logPath
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
     Invoke-WebRequest -Uri "https://aka.ms/azcmagent-windows" -TimeoutSec 30 -OutFile "$InstallationFolder\install_windows_azcmagent.ps1"
+    "Finished downloading of the installation script" >> $logPath
 
     # Install the hybrid agent
+    "Running the installation script" >> $logPath
     & "$InstallationFolder\install_windows_azcmagent.ps1"
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to install the hybrid agent: $LASTEXITCODE"
     }
+    "Successfully ran the installation script" >> $logPath
 
     $agentData = Get-ItemProperty $RegKey -ErrorAction SilentlyContinue
     if (! $agentData) {
         throw "Could not read installation data from registry, a problem may have occurred during installation" 
 
-
         "Azure Connected Machine Agent version $($agentData.version) is already deployed, exiting without changes" >> $logPath
         exit
     }
-    "Installation Succeeded" >> $logpath
+    "Installation Complete" >> $logpath
 
     & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect --config "$InstallationFolder\$configFilename" >> $logpath
     if ($LASTEXITCODE -ne 0) {
