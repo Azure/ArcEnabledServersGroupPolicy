@@ -32,7 +32,7 @@ if (!(Test-Path $InstallationFolder) ) {
 # create log file and overwrite if it already exists
 $logpath = new-item -path $InstallationFolder -Name $logFile -ItemType File -Force
 
-'''
+@"
 Azure Arc-Enabled Servers Agent Deployment Group Policy Script
 Time: $(Get-Date)
 RemotePath: $remotePath
@@ -41,7 +41,7 @@ RegKey: $RegKey
 LogFile: $LogPath
 InstallationFolder: $InstallationFolder
 ConfigFileName: $configFileName
-''' >> $logPath 
+"@ >> $logPath 
 
 try
 {
@@ -50,7 +50,6 @@ try
         "Azure Connected Machine Agent version $($agentData.version) is already deployed, exiting without changes" >> $logPath
         exit
     }
-
 
     # Agent is not installed, proceed with installation
     "Copying necessary items to $InstallationFolder" >> $logPath
@@ -73,7 +72,6 @@ try
     $agentData = Get-ItemProperty $RegKey -ErrorAction SilentlyContinue
     if (! $agentData) {
         throw "Could not read installation data from registry, a problem may have occurred during installation" 
-
         "Azure Connected Machine Agent version $($agentData.version) is already deployed, exiting without changes" >> $logPath
         exit
     }
@@ -85,12 +83,8 @@ try
     }
 
     "Connect Succeeded" >> $logpath
-
     & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" show >> $logpath
 
 } catch {
     "An error occurred during installation: $_" >> $logpath
-}
-
-
-  
+}  
