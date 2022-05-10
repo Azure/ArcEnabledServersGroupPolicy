@@ -69,7 +69,7 @@ open the schedueled task and configure as following:
     - Settings 
         - Program/script: 
             - enter "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
-        - Add Arguments(optional): -ExecutionPolicy Bypass -command "& UNC path for the deployment powershell script "
+        - Add Arguments(optional): -ExecutionPolicy Bypass -command "& UNC path for the deployment powershell script " -remotePath <path to your shared folder>
         - the following is a simple example of how to install and onboard the server to Azure using the config file you have created in the previous step 
 <br>
 
