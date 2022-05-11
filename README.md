@@ -12,10 +12,6 @@ This method requires that you have domain administrator privilege and access to 
 
 Prepare a remote share to host the Azure connected Machine agent package for windows and the configuration file, at least you need read only access
 
-### Download the agent
-
-Download [Windows agent Windows Installer package](https://aka.ms/AzureConnectedMachineAgent) from the Microsoft Download Center and save it to the remote share.
-
 ### Creating  Configuration file
 
 The Azure connected Machine agent uses a Json configuration files to provide a consistence configuration experience and eas the at scale deployment, the file structure is looks like this 
@@ -36,10 +32,10 @@ Copy the above the content in a file and save in a the remote share as a json fi
 
 - Open the Group Policy managment console (GPMC), navigate to the location in your AD forst that contains the VMs which you would like to join to Azure Arc, then eight-click and select "Create a GPO in this domain, and Link it here." When prompted, assign a descriptive name to this GPO:
 - Edit the GPO, navigate to the following location:
-  ***Computer Configuration -> Preferences -> Control Panel Settings -> Scheduled Tasks***, right-click in the blank area, ***select New -> Schedueled Task (At least Windows 7)***
+  ***Computer Configuration -> Preferences -> Control Panel Settings -> Scheduled Tasks***, right-click in the blank area, ***select New -> Scheduled Task (At least Windows 7)***
 
 ### Creating the Scheduel Task
-open the schedueled task and configure as following: 
+open the scheduled task and configure as following: 
 ##### General tab 
     Action: Create
     Security options:
@@ -56,7 +52,7 @@ open the schedueled task and configure as following:
     Begin the task : select "On a schedule"
     Settings:
          - One time: choose the desired date and time.
-         - Make sure to scheduel the date and   time after after the GPO resfresh interval for computers, By default, computer Group Policy is updated in the background every 90 minutes, with a random offset of 0 to 30 minutes
+         - Make sure to schedule the date and   time after after the GPO refresh interval for computers, By default, computer Group Policy is updated in the background every 90 minutes, with a random offset of 0 to 30 minutes
     Advanced Settings:
          - Check Enabled 
 <p align = "center"> 
@@ -70,47 +66,6 @@ open the schedueled task and configure as following:
         - Program/script: 
             - enter "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
         - Add Arguments(optional): -ExecutionPolicy Bypass -command "& UNC path for the deployment powershell script " -remotePath <path to your shared folder>
-        - the following is a simple example of how to install and onboard the server to Azure using the config file you have created in the previous step 
-<br>
-
-    [string] $remotePath = "\\dc-01.contoso.lcl\Software\Arc"
-    [string] $localPath = "$env:HOMEDRIVE\ArcDeployment"
-    [string] $RegKey = "HKLM\SOFTWARE\Microsoft\Azure Connected Machine Agent"
-    [string] $logFile = "installationlog.txt"
-    [string] $InstaltionFolder = "ArcDeployment"
-    [string] $configFilename = "ArcConfig.json"
-
-    if (!(Test-Path $localPath) ) {
-        $BitsDirectory = new-item -path C:\ -Name $InstaltionFolder -ItemType Directory 
-        $logpath = new-item -path $BitsDirectory -Name $logFile -ItemType File
-    }
-    else{
-    $BitsDirectory = "C:\ArcDeployment"
-    }
-    function Deploy-Agent {
-        [bool] $isDeployed = Test-Path $RegKey
-        if ($isDeployed) {
-            $logMessage = "Azure Arc Serverenabled agent is deployed , exit process"
-            $logMessage >> $logpath
-            exit
-        }
-        else { 
-            Copy-Item -Path "$remotePath\*" -Destination $BitsDirectory -Recurse -Verbose
-            $exitCode = (Start-Process -FilePath msiexec.exe -ArgumentList @("/i", "$BitsDirectory\AzureConnectedMachineAgent.msi" , "/l*v", "$BitsDirectory\$logFile", "/qn") -Wait -Passthru).ExitCode
-            
-            if($exitCode -eq 0){
-           Start-Sleep -Seconds 120
-           $x=   & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect --config "$BitsDirectory\$configFilename"
-                $msg >> $logpath 
-            }
-            else {
-                $message = (net helpmsg $exitCode)
-                $message >> $logpath 
-            }
-    
-        }
-    }
-</br>
         - Start in(optional): C:\
 <p align = "center"> 
      <img src= "Pictures\ST-Actions.jpg">
