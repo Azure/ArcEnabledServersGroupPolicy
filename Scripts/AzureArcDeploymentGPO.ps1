@@ -9,7 +9,7 @@ param(
     [string] $RemotePath = "\\dc-01.contoso.lcl\Software\Arc",
 
     [Parameter(Mandatory=$false)]
-    [string] $LogFile = "onboardingLog.txt",
+    [string] $LogFile = "onboardinglog.txt",
 
     [Parameter(Mandatory=$false)]
     [string] $InstallationFolder = "$env:HOMEDRIVE\ArcDeployment",
