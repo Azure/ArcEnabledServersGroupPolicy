@@ -1,5 +1,4 @@
 # This script is used to install and configure the Azure Connected Machine Agent 
-# 
 
 [CmdletBinding()]
 param(
@@ -36,7 +35,6 @@ $logpath = new-item -path $InstallationFolder -Name $logFile -ItemType File -For
 Azure Arc-Enabled Servers Agent Deployment Group Policy Script
 Time: $(Get-Date)
 RemotePath: $remotePath
-LocalPath: $localPath
 RegKey: $RegKey
 LogFile: $LogPath
 InstallationFolder: $InstallationFolder
@@ -45,22 +43,17 @@ ConfigFileName: $configFileName
 
 try
 {
-    "Copying necessary items to $InstallationFolder" >> $logPath
+    "Copying items to $InstallationFolder" >> $logPath
     Copy-Item -Path "$remotePath\*" -Destination $InstallationFolder -Recurse -Verbose
 
     $agentData = Get-ItemProperty $RegKey -ErrorAction SilentlyContinue
     if ($agentData) {
         "Azure Connected Machine Agent version $($agentData.version) is already installed, proceeding to azcmagent connect" >> $logPath
     } else {
-        # Agent is not installed, proceed with installation
-        "Copying necessary items to $InstallationFolder" >> $logPath
-        Copy-Item -Path "$remotePath\*" -Destination $InstallationFolder -Recurse -Verbose
-
         # Download the installation package
-        "Started downloading the installation script" >> $logPath
+        "Downloading the installation script" >> $logPath
         [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
         Invoke-WebRequest -Uri "https://aka.ms/azcmagent-windows" -TimeoutSec 30 -OutFile "$InstallationFolder\install_windows_azcmagent.ps1"
-        "Finished downloading of the installation script" >> $logPath
 
         # Install the hybrid agent
         "Running the installation script" >> $logPath
@@ -68,7 +61,6 @@ try
         if ($LASTEXITCODE -ne 0) {
             throw "Failed to install the hybrid agent: $LASTEXITCODE"
         }
-        "Successfully ran the installation script" >> $logPath
 
         $agentData = Get-ItemProperty $RegKey -ErrorAction SilentlyContinue
         if (! $agentData) {
