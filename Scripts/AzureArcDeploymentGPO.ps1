@@ -6,16 +6,16 @@ param(
     [string] $AltDownloadLocation,
 
     [Parameter(Mandatory=$true)]
-    [string] $remotePath = "\\dc-01.contoso.lcl\Software\Arc",
+    [string] $RemotePath = "\\dc-01.contoso.lcl\Software\Arc",
 
     [Parameter(Mandatory=$false)]
-    [string] $logFile = "installationlog.txt",
+    [string] $LogFile = "onboardingLog.txt",
 
     [Parameter(Mandatory=$false)]
     [string] $InstallationFolder = "$env:HOMEDRIVE\ArcDeployment",
 
     [Parameter(Mandatory=$false)]
-    [string] $configFilename = "ArcConfig.json"
+    [string] $ConfigFilename = "ArcConfig.json"
 )
 
 $ErrorActionPreference="Stop"
@@ -29,22 +29,22 @@ if (!(Test-Path $InstallationFolder) ) {
 } 
 
 # create log file and overwrite if it already exists
-$logpath = new-item -path $InstallationFolder -Name $logFile -ItemType File -Force
+$logpath = new-item -path $InstallationFolder -Name $LogFile -ItemType File -Force
 
 @"
 Azure Arc-Enabled Servers Agent Deployment Group Policy Script
 Time: $(Get-Date)
-RemotePath: $remotePath
+RemotePath: $RemotePath
 RegKey: $RegKey
 LogFile: $LogPath
 InstallationFolder: $InstallationFolder
-ConfigFileName: $configFileName
+ConfigFileName: $ConfigFilename
 "@ >> $logPath 
 
 try
 {
     "Copying items to $InstallationFolder" >> $logPath
-    Copy-Item -Path "$remotePath\*" -Destination $InstallationFolder -Recurse -Verbose
+    Copy-Item -Path "$RemotePath\*" -Destination $InstallationFolder -Recurse -Verbose
 
     $agentData = Get-ItemProperty $RegKey -ErrorAction SilentlyContinue
     if ($agentData) {
@@ -71,7 +71,7 @@ try
         "Installation Complete" >> $logpath
     }
 
-    & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect --config "$InstallationFolder\$configFilename" >> $logpath
+    & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect --config "$InstallationFolder\$ConfigFilename" >> $logpath
     if ($LASTEXITCODE -ne 0) {
         throw "Failed during azcmagent connect: $LASTEXITCODE"
     }
