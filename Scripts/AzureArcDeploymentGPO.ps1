@@ -25,11 +25,11 @@ $ProgressPreference="SilentlyContinue"
 
 # create local installation folder if it doesn't exist
 if (!(Test-Path $InstallationFolder) ) {
-    [void](new-item -path $InstallationFolder -ItemType Directory )
+    [void](New-Item -path $InstallationFolder -ItemType Directory )
 } 
 
 # create log file and overwrite if it already exists
-$logpath = new-item -path $InstallationFolder -Name $LogFile -ItemType File -Force
+$logpath = New-Item -path $InstallationFolder -Name $LogFile -ItemType File -Force
 
 @"
 Azure Arc-Enabled Servers Agent Deployment Group Policy Script
