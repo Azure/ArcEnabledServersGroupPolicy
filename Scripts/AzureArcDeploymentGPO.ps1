@@ -6,7 +6,7 @@ param(
     [string] $AltDownloadLocation,
 
     [Parameter(Mandatory=$true)]
-    [string] $RemotePath = "\\dc-01.contoso.lcl\Software\Arc",
+    [string] $RemotePath,
 
     [Parameter(Mandatory=$false)]
     [string] $LogFile = "onboardinglog.txt",
