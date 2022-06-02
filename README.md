@@ -16,7 +16,7 @@ Download the install script (Scripts/AzureArcDeploymentGPO.ps1) save it to the r
 
 ### Define a Configuration File
 
-The Azure Connected Machine agent uses a json configuration file to provide a consistent configuration experience and ease of at scale deployment. Copy the configuration Copy the ArcConfig.json file in the scripts folder to your remote share, and edit it with your onboarding information.
+The Azure Connected Machine agent uses a json configuration file to provide a consistent configuration experience and ease of at scale deployment. Copy the ArcConfig.json file in the Scripts folder to your remote share, and edit it with your onboarding information.
 
 # Create a Group Policy Object
 
