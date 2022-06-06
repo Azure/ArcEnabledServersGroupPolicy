@@ -1,5 +1,4 @@
 # This script is used to install and configure the Azure Connected Machine Agent 
-# 
 
 [CmdletBinding()]
 param(
@@ -7,16 +6,16 @@ param(
     [string] $AltDownloadLocation,
 
     [Parameter(Mandatory=$true)]
-    [string] $remotePath = "\\dc-01.contoso.lcl\Software\Arc",
+    [string] $RemotePath,
 
     [Parameter(Mandatory=$false)]
-    [string] $logFile = "installationlog.txt",
+    [string] $LogFile = "onboardinglog.txt",
 
     [Parameter(Mandatory=$false)]
     [string] $InstallationFolder = "$env:HOMEDRIVE\ArcDeployment",
 
     [Parameter(Mandatory=$false)]
-    [string] $configFilename = "ArcConfig.json"
+    [string] $ConfigFilename = "ArcConfig.json"
 )
 
 $ErrorActionPreference="Stop"
@@ -26,65 +25,60 @@ $ProgressPreference="SilentlyContinue"
 
 # create local installation folder if it doesn't exist
 if (!(Test-Path $InstallationFolder) ) {
-    [void](new-item -path $InstallationFolder -ItemType Directory )
+    [void](New-Item -path $InstallationFolder -ItemType Directory )
 } 
 
 # create log file and overwrite if it already exists
-$logpath = new-item -path $InstallationFolder -Name $logFile -ItemType File -Force
+$logpath = New-Item -path $InstallationFolder -Name $LogFile -ItemType File -Force
 
-'''
+@"
 Azure Arc-Enabled Servers Agent Deployment Group Policy Script
 Time: $(Get-Date)
-RemotePath: $remotePath
-LocalPath: $localPath
+RemotePath: $RemotePath
 RegKey: $RegKey
 LogFile: $LogPath
 InstallationFolder: $InstallationFolder
-ConfigFileName: $configFileName
-''' >> $logPath 
+ConfigFileName: $ConfigFilename
+"@ >> $logPath 
 
 try
 {
+    "Copying items to $InstallationFolder" >> $logPath
+    Copy-Item -Path "$RemotePath\*" -Destination $InstallationFolder -Recurse -Verbose
+
     $agentData = Get-ItemProperty $RegKey -ErrorAction SilentlyContinue
     if ($agentData) {
-        "Azure Connected Machine Agent version $($agentData.version) is already deployed, exiting without changes" >> $logPath
-        exit
+        "Azure Connected Machine Agent version $($agentData.version) is already installed, proceeding to azcmagent connect" >> $logPath
+    } else {
+        # Download the installation package
+        "Downloading the installation script" >> $logPath
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
+        Invoke-WebRequest -Uri "https://aka.ms/azcmagent-windows" -TimeoutSec 30 -OutFile "$InstallationFolder\install_windows_azcmagent.ps1"
+
+        # Install the hybrid agent
+        "Running the installation script" >> $logPath
+        & "$InstallationFolder\install_windows_azcmagent.ps1"
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to install the hybrid agent: $LASTEXITCODE"
+        }
+
+        $agentData = Get-ItemProperty $RegKey -ErrorAction SilentlyContinue
+        if (! $agentData) {
+            throw "Could not read installation data from registry, a problem may have occurred during installation" 
+            "Azure Connected Machine Agent version $($agentData.version) is already deployed, exiting without changes" >> $logPath
+            exit
+        }
+        "Installation Complete" >> $logpath
     }
 
-    # Agent is not installed, proceed with installation
-    Copy-Item -Path "$remotePath\*" -Destination $InstallationFolder -Recurse -Verbose
-
-    # Download the installation package
-    Invoke-WebRequest -Uri "https://aka.ms/azcmagent-windows" -TimeoutSec 30 -OutFile "$InstallationFolder\install_windows_azcmagent.ps1"
-
-    # Install the hybrid agent
-    & "$InstallationFolder\install_windows_azcmagent.ps1"
-    if ($LASTEXITCODE -ne 0) {
-        throw "Failed to install the hybrid agent: $LASTEXITCODE"
-    }
-
-    $agentData = Get-ItemProperty $RegKey -ErrorAction SilentlyContinue
-    if (! $agentData) {
-        throw "Could not read installation data from registry, a problem may have occurred during installation" 
-
-
-        "Azure Connected Machine Agent version $($agentData.version) is already deployed, exiting without changes" >> $logPath
-        exit
-    }
-    "Installation Succeeded" >> $logpath
-
-    & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect --config "$InstallationFolder\$configFilename" >> $logpath
+    & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect --config "$InstallationFolder\$ConfigFilename" >> $logpath
     if ($LASTEXITCODE -ne 0) {
         throw "Failed during azcmagent connect: $LASTEXITCODE"
     }
 
     "Connect Succeeded" >> $logpath
-
     & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" show >> $logpath
 
 } catch {
     "An error occurred during installation: $_" >> $logpath
-}
-
-
-  
+}  
