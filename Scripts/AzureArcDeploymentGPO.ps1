@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
 # This script is used to install and configure the Azure Connected Machine Agent 
 
 [CmdletBinding()]
