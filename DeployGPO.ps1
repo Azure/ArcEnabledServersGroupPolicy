@@ -253,8 +253,6 @@ Write-Host "`nImport the setting from the backup..." -ForegroundColor Green
 try {
     Import-GPO -Path $BackupPath -TargetName $GPONamewithTimestamp -BackupId $Backupid -ErrorAction Stop
     Write-Host "GPO Setting were successfully imported.`nOpen GPO Management Console and Check for '$GPONamewithTimestamp`' Group policy" -ForegroundColor Green
-    Write-Host "`nBe sure to copy the `'AzureConnectedMachineAgent.msi`' file to the $AzureArcDeployPath folder!!" -ForegroundColor Yellow
-    Write-Host "You can download it from `'https://aka.ms/AzureConnectedMachineAgent`'" -ForegroundColor Green
     gpmc.msc
 }
 catch { Write-Host "The Group Policy setting could not be imported:`n$(($_.Exception).Message)" -ForegroundColor Red ; break }
