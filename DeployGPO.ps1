@@ -232,7 +232,15 @@ try {
         Copy-Item -Path "$PSScriptRoot\AzureArcDeployment.psm1" -Destination $AzureArcDeployPath -ErrorAction Stop
         Write-Host "Onboarding script `'AzureArcDeployment.psm1`' successfully copied to $AzureArcDeployPath" -ForegroundColor Green
     }
-
+    
+    if (Test-Path "$AzureArcDeployPath\AzureConnectedMachineAgent.msi" -ErrorAction SilentlyContinue) {
+        Write-Host "File `'$AzureArcDeployPath\AzureConnectedMachineAgent.msi`' already exists." -ForegroundColor Red; throw
+    }
+    else {
+        Copy-Item -Path "$FolderRemotepath\AzureConnectedMachineAgent.msi" -Destination $AzureArcDeployPath -ErrorAction Stop
+        Write-Host "Install file `'AzureConnectedMachineAgent.msi`' successfully copied to $AzureArcDeployPath" -ForegroundColor Green
+    }
+    
     $encryptedSecret | Out-File -FilePath (Join-Path -Path $AzureArcDeployPath -ChildPath "encryptedServicePrincipalSecret") -Force
 
 }
