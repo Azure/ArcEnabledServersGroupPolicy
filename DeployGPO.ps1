@@ -232,7 +232,15 @@ try {
         Copy-Item -Path "$PSScriptRoot\AzureArcDeployment.psm1" -Destination $AzureArcDeployPath -ErrorAction Stop
         Write-Host "Onboarding script `'AzureArcDeployment.psm1`' successfully copied to $AzureArcDeployPath" -ForegroundColor Green
     }
-
+    
+    if (Test-Path "$AzureArcDeployPath\AzureConnectedMachineAgent.msi" -ErrorAction SilentlyContinue) {
+        Write-Host "File `'$AzureArcDeployPath\AzureConnectedMachineAgent.msi`' already exists." -ForegroundColor Red; throw
+    }
+    else {
+        Copy-Item -Path "$FolderRemotepath\AzureConnectedMachineAgent.msi" -Destination $AzureArcDeployPath -ErrorAction Stop
+        Write-Host "Install file `'AzureConnectedMachineAgent.msi`' successfully copied to $AzureArcDeployPath" -ForegroundColor Green
+    }
+    
     $encryptedSecret | Out-File -FilePath (Join-Path -Path $AzureArcDeployPath -ChildPath "encryptedServicePrincipalSecret") -Force
 
 }
@@ -245,8 +253,6 @@ Write-Host "`nImport the setting from the backup..." -ForegroundColor Green
 try {
     Import-GPO -Path $BackupPath -TargetName $GPONamewithTimestamp -BackupId $Backupid -ErrorAction Stop
     Write-Host "GPO Setting were successfully imported.`nOpen GPO Management Console and Check for '$GPONamewithTimestamp`' Group policy" -ForegroundColor Green
-    Write-Host "`nBe sure to copy the `'AzureConnectedMachineAgent.msi`' file to the $AzureArcDeployPath folder!!" -ForegroundColor Yellow
-    Write-Host "You can download it from `'https://aka.ms/AzureConnectedMachineAgent`'" -ForegroundColor Green
     gpmc.msc
 }
 catch { Write-Host "The Group Policy setting could not be imported:`n$(($_.Exception).Message)" -ForegroundColor Red ; break }
