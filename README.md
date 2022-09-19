@@ -24,9 +24,9 @@ The project also contains Azure Workbooks to keep track of the onboarding proces
 
   *Domain Controllers*, *Domain Computers* and *Domain Admins*: Change Permissions
 
-
- ![RemoteShareFolderPermissions](Screenshoot/RemoteShareFolderPermissions.png)
  
+- Copy the *'AzureConnectedMachineAgent.msi'* file to the shared folder
+    You can download it from https://aka.ms/AzureConnectedMachineAgent
 
 ## Installation
 
@@ -54,6 +54,5 @@ The project also contains Azure Workbooks to keep track of the onboarding proces
 
     - *AssessOnly* [optional] makes the GPo to work in Assess mode, no onboarding is done.
 
-- Copy the *'AzureConnectedMachineAgent.msi'* file to the *AzureArcDeploy* folder inside the *ArcRemoteShare*. 
-    You can download it from https://aka.ms/AzureConnectedMachineAgent
+
 

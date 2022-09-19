@@ -66,14 +66,21 @@ Param (
     [switch]$AssessOnly
 )
 
+#Calculate Logging path
+$LoggingNetworkPath = "$((Join-Path -Path "\\$ReportServerFQDN" -ChildPath $ArcRemoteShare) -replace "\\$")" + "\AzureArcLogging"
+
+#Calculate network full path
+$SourceFilesFullPath = "$((Join-Path -Path "\\$ReportServerFQDN" -ChildPath $ArcRemoteShare) -replace "\\$")" + "\AzureArcDeploy"
+
+$arcInfo = Get-Content (Join-Path $SourceFilesFullPath "ArcInfo.json") | ConvertFrom-Json
 
 ###########################################################################################################
 # Add the service principal application ID and more data here:
-$servicePrincipalClientId = "servicePrincipalClientId"
-$tenantid = "tenantid"
-$subscriptionid = "subscriptionid"
-$ResourceGroup = "ResourceGroup"
-$location = "location"
+$servicePrincipalClientId = $arcInfo.ServicePrincipalClientId
+$tenantid = $arcInfo.TenantId
+$subscriptionid = $arcInfo.SubscriptionId
+$ResourceGroup = $arcInfo.ResourceGroup
+$location = $arcInfo.Location
 
 $tags = @{ # Tags to be added to the Arc servers
     Department  = "Department"
@@ -277,7 +284,7 @@ Function Connect-ArcAgent {
     if ($AgentProxy -ne "") {
         $Proxyconf = & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" config set proxy.url $AgentProxy
     }
-    $ConnectionOuput = & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect --service-principal-id $servicePrincipalClientId --service-principal-secret $sps --resource-group $ResourceGroup --tenant-id $tenantid --location $location --subscription-id $subscriptionid --cloud AzureCloud --tags $FinalTag --correlation-id $((New-Guid).guid)
+    $ConnectionOutput = & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect --service-principal-id $servicePrincipalClientId --service-principal-secret $sps --resource-group $ResourceGroup --tenant-id $tenantid --location $location --subscription-id $subscriptionid --cloud AzureCloud --tags $FinalTag --correlation-id $((New-Guid).guid)
     
 
     if ($LastExitCode -eq 0) {
@@ -288,7 +295,7 @@ Function Connect-ArcAgent {
     else {
          
         #check for any errors in Agent connection
-        Write-Log -msg "Agent Connection was unsuccessfull. Waiting for logs to be generated..." -msgtype ERROR
+        Write-Log -msg "Agent Connection was unsuccessful. Waiting for logs to be generated..." -msgtype ERROR
         $script:Agentcode = $null
         do { $script:Agentcode = Get-Content "$env:ProgramData\AzureConnectedMachineAgent\Log\azcmagent.log"-Tail 50 | Select-String 'AZCM\d*:[\s\w]*' | ForEach-Object { $_.matches } | Select-Object -Last 1 -ExpandProperty value }
         Until ($null -ne $script:Agentcode)
@@ -369,12 +376,6 @@ Function Write-Log {
 
 
 # MAIN
-
-#Calculate Logging path
-$LoggingNetworkPath = "$((Join-Path -Path "\\$ReportServerFQDN" -ChildPath $ArcRemoteShare) -replace "\\$")" + "\AzureArcLogging"
-
-#Calculate network full path
-$SourceFilesFullPath = "$((Join-Path -Path "\\$ReportServerFQDN" -ChildPath $ArcRemoteShare) -replace "\\$")" + "\AzureArcDeploy"
 
 if (-not (Test-Path $workfolder))
 { New-Item -Path $workfolder -Force -ItemType Directory | Out-Null }
