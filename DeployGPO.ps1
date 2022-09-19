@@ -21,7 +21,7 @@
 .PARAMETER ReportServerFQDN
    FQDN of the Server that will act as report Server (and source files)
 
-.PARAMETER spsecret
+.PARAMETER ServicePrincipalSecret
    Service Principal's secret
    Use this link to create a new one:
    https://docs.microsoft.com/en-us/azure/azure-arc/servers/onboard-service-principal#create-a-service-principal-for-onboarding-at-scale
@@ -36,7 +36,9 @@
    This example deploys the GPO to the contoso.com domain and copies the onboarding script EnableAzureArc.ps1
    to the remote share AzureArcOnBoard in the Server.contoso.com server
 
-   .\DeployGPO.ps1 -DomainFQDN contoso.com -ReportServerFQDN Server.contoso.com -ArcRemoteShare AzureArcOnBoard -Spsecret $spsecret [-AgentProxy $AgentProxy]
+   .\DeployGPO.ps1 -DomainFQDN contoso.com -ReportServerFQDN Server.contoso.com -ArcRemoteShare AzureArcOnBoard -ServicePrincipalSecret $ServicePrincipalSecret 
+       -ServicePrincipalClientId $ServicePrincipalClientId -SubscriptionId $SubscriptionId --ResourceGroup $ResourceGroup -Location $Location -TenantId $TenantId 
+       [-AgentProxy $AgentProxy]
 
 #>
 
@@ -45,9 +47,25 @@ Param (
     [System.String]$DomainFQDN,
     [Parameter(Mandatory = $True)]
     [System.String]$ReportServerFQDN, # "server.contoso.com"
+    
     [Parameter(Mandatory = $True)]
-    [System.String]$Spsecret,
-    [System.String]$ArcRemoteShare = "AzureArcOnboard",
+    [System.String]$ServicePrincipalClientId,
+    [Parameter(Mandatory = $True)]
+    [System.String]$ServicePrincipalSecret,
+    
+    [Parameter(Mandatory = $True)]
+    [System.String]$SubscriptionId,
+    [Parameter(Mandatory = $True)]
+    [System.String]$ResourceGroup,
+    [Parameter(Mandatory = $True)]
+    [System.String]$Location,
+
+    [Parameter(Mandatory = $True)]
+    [System.String]$TenantId,
+
+    [Parameter(Mandatory = $True)]
+    [System.String]$ArcRemoteShare,
+
     [System.String]$AgentProxy,
     [switch]$AssessOnly
 )
@@ -55,7 +73,6 @@ Param (
 $ErrorActionPreference = "Stop"
 
 $GPOName = "[MSFT] Azure Arc Servers Onboarding"
-
 
 #Create the remote folders AzureArcDeploy & AzureArcLogging
 
@@ -204,14 +221,14 @@ try {
 catch { Write-Host "The Group Policy could not be created:`n$(($_.Exception).Message)" -ForegroundColor Red ; break }
 
 
-# Encrypting the SPSecret to be decrypted only by the Domain Controllers and the Domain Computers security groups
+# Encrypting the ServicePrincipalSecret to be decrypted only by the Domain Controllers and the Domain Computers security groups
 
 $DomainComputersSID = "SID=" + $DomainComputersSID
 $DomainControllersSID = "SID=" + $DomainControllersSID
 $descriptor = @($DomainComputersSID, $DomainControllersSID) -join " OR "
 
 Import-Module $PSScriptRoot\AzureArcDeployment.psm1
-$encryptedSecret = [DpapiNgUtil]::ProtectBase64($descriptor, $spsecret)
+$encryptedSecret = [DpapiNgUtil]::ProtectBase64($descriptor, $ServicePrincipalSecret)
 
 #Copying Script to Source files Subfolder path
 Write-Host "`nCopying Script EnableAzureArc.ps1 to path $AzureArcDeployPath ..." -ForegroundColor Green
@@ -232,7 +249,7 @@ try {
         Copy-Item -Path "$PSScriptRoot\AzureArcDeployment.psm1" -Destination $AzureArcDeployPath -ErrorAction Stop
         Write-Host "Onboarding script `'AzureArcDeployment.psm1`' successfully copied to $AzureArcDeployPath" -ForegroundColor Green
     }
-    
+
     if (Test-Path "$AzureArcDeployPath\AzureConnectedMachineAgent.msi" -ErrorAction SilentlyContinue) {
         Write-Host "File `'$AzureArcDeployPath\AzureConnectedMachineAgent.msi`' already exists." -ForegroundColor Red; throw
     }
@@ -240,7 +257,18 @@ try {
         Copy-Item -Path "$FolderRemotepath\AzureConnectedMachineAgent.msi" -Destination $AzureArcDeployPath -ErrorAction Stop
         Write-Host "Install file `'AzureConnectedMachineAgent.msi`' successfully copied to $AzureArcDeployPath" -ForegroundColor Green
     }
+
+    $infoTable = @{"ServicePrincipalClientId"="$ServicePrincipalClientId";"SubscriptionId"="$SubscriptionId";"ResourceGroup"="$ResourceGroup";"Location"="$Location";"TenantId"="$TenantId"}
+    $infoTableJSON = $infoTable | ConvertTo-Json -Compress
     
+    if (Test-Path "$AzureArcDeployPath\ArcInfo.json" -ErrorAction SilentlyContinue) {
+        Write-Host "File `'$AzureArcDeployPath\ArcInfo.json`' already exists." -ForegroundColor Red; throw
+    }
+    else {
+        $infoTableJSON | Out-File -FilePath "$AzureArcDeployPath\ArcInfo.json"
+        Write-Host "JSON file with onboarding info `'ArcInfo.json`' successfully copied to $AzureArcDeployPath" -ForegroundColor Green
+    }
+
     $encryptedSecret | Out-File -FilePath (Join-Path -Path $AzureArcDeployPath -ChildPath "encryptedServicePrincipalSecret") -Force
 
 }
