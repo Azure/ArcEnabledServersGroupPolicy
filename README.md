@@ -25,7 +25,8 @@ More information can be found [here](https://learn.microsoft.com/en-us/azure/azu
   *Domain Controllers*, *Domain Computers* and *Domain Admins*: Change Permissions
 
  
-- Copy the *'AzureConnectedMachineAgent.msi'* file to the shared folder
+- Copy the *'AzureConnectedMachineAgent.msi'* file to the shared folder.
+
     You can download it from https://aka.ms/AzureConnectedMachineAgent
 
 ## Installation
@@ -34,25 +35,27 @@ More information can be found [here](https://learn.microsoft.com/en-us/azure/azu
 
 - Copy the project structure to a local folder of a Domain Controller.
 
-- Fill in *EnableAzureArc.ps1* Powershell Script with the following information from your environment:
-  
-    *servicePrincipalClientId, tenantid, subscriptionid, ResourceGroup, location, tags* and *ReportServerFQDN*
-
 - Execute the deployment script *DeployGPO.ps1*, with the following syntax:
   
-        .\DeployGPO.ps1 -DomainFQDN contoso.com -ReportServerFQDN Server.contoso.com -ArcRemoteShare AzureArcOnBoard -Spsecret $spsecret [-AgentProxy $AgentProxy] [-AssessOnly]
+        .\DeployGPO.ps1 -DomainFQDN contoso.com -ReportServerFQDN Server.contoso.com -ArcRemoteShare AzureArcOnBoard -ServicePrincipalSecret $ServicePrincipalSecret 
+       -ServicePrincipalClientId $ServicePrincipalClientId -SubscriptionId $SubscriptionId --ResourceGroup $ResourceGroup -Location $Location -TenantId $TenantId 
+       [-AgentProxy $AgentProxy]
 
     Where:
 
-    - *Spsecret* is the secret from the Service Principal created previously.
-
+    - *DomainFQDN* is the fully qualified domain name of the domain
+    
     - *ReportServerFQDN* is the Fully Qualified Domain Name of the host where the network share resides.
-
+    
     - *ArcRemoteShare* is the name of the network share you've created
+    
+    - *ServicePrincipalSecret* is the secret from the Service Principal created previously.
+    
+    - *ServicePrincipalClientId* is the client id from the Service Principal created previously
+
+    - *SubscriptionId*, *ResourceGroup*, *Location*, *TenantId* corespond to where your Arc Servers are going to be onboarded
 
     - *AgentProxy* [optional] is the name of the proxy if used
-
-    - *AssessOnly* [optional] makes the GPo to work in Assess mode, no onboarding is done.
 
 
 
