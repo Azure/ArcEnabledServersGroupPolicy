@@ -1,7 +1,7 @@
 # Arc Deployment by GPO
 Arc GPO Deployment project contains the necessary files to onboard Non Azure machines to Azure Arc automatically, using a GPO
 
-The project also contains Azure Workbooks to keep track of the onboarding process.
+More information can be found [here](https://learn.microsoft.com/en-us/azure/azure-arc/servers/onboard-group-policy-service-principal-encryption)
 
 ## Content
 
