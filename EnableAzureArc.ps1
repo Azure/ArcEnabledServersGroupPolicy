@@ -395,7 +395,6 @@ $hash = @{
     OSVersion           = (Get-WmiObject -Class win32_Operatingsystem).Caption
     FrameworkVersion    = ""
     PowershellVersion   = ($PSVersionTable.PSVersion.ToString()).substring(0, 3)
-    AzureVM             = $false
     ArcCompatible       = $true
     AgentStatus         = ""
     AgentLastHeartbeat  = ""
@@ -453,13 +452,11 @@ try {
 catch {}
 If ($Null -ne $TestAzuremachine) {
     Write-Log -msg "Machine is an Azure VM, it won't be onboarded in Azure Arc" -msgtype ERROR
-    $ArcOnboardingData.AzureVM = $true
     $ArcOnboardingData.ArcCompatible = $false
 
 }
 else {
     Write-Log -msg "Machine is not an Azure VM. Continuing the onboarding process" -msgtype INFO
-    $ArcOnboardingData.AzureVM = $false
 }
 
 #In case the onboarding is in AssessOnly mode, the onboarding process posts the data and exits
@@ -472,7 +469,7 @@ if ($PSBoundParameters.ContainsKey('AssessOnly')) {
 
 #Post to share if Machine has dependencies to solve
 
-if (($ArcOnboardingData.AzureVM -eq $false) -and ($ArcOnboardingData.ArcCompatible -eq $false)) {
+if ($ArcOnboardingData.ArcCompatible -eq $false) {
     Write-Log -msg "Machine doesn't meet the minimun requirements for Azure Arc: Windows PowerShell 5.1 and NET Framework 4.6, or it is an Azure VM." -msgtype ERROR
     Send-ArcData -Data $ArcOnboardingData -Path "$LoggingNetworkPath\$($env:COMPUTERNAME).xml"
     Write-Log -msg "End of the Azure Arc Onboarding process..." -msgtype INFO
