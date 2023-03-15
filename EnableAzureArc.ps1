@@ -433,17 +433,6 @@ else {
     Write-Log -msg "Machine has Framework version $($FWVersion.ToString()), this is supported" -msgtype INFO
 }
 
-#Check PowerShell Version (Powershell 5 is required)
-
-if ($PSVersionTable.PSVersion.Major -lt 5) {
-    Write-Log -msg "Machine has Powershell version $($PSVersionTable.PSVersion.Major), minimum version required is PowerShell v5." -msgtype ERROR
-    $ArcOnboardingData.ArcCompatible = $false
-}
-else {
-    Write-Log -msg "Machine has PowerShell version version $($PSVersionTable.PSVersion.Major), this is supported" -msgtype INFO
-}
-
-
 #Check if it's an Azure VM
 try {
     $TestAzuremachine = Invoke-RestMethod -Headers @{"Metadata" = "true" } `
