@@ -433,10 +433,10 @@ else {
     Write-Log -msg "Machine has Framework version $($FWVersion.ToString()), this is supported" -msgtype INFO
 }
 
-#Check PowerShell Version (Powershell 5 is required)
+#Check PowerShell Version (Powershell 4 is required)
 
-if ($PSVersionTable.PSVersion.Major -lt 5) {
-    Write-Log -msg "Machine has Powershell version $($PSVersionTable.PSVersion.Major), minimum version required is PowerShell v5." -msgtype ERROR
+if ($PSVersionTable.PSVersion.Major -lt 4) {
+    Write-Log -msg "Machine has Powershell version $($PSVersionTable.PSVersion.Major), minimum version required is PowerShell v4." -msgtype ERROR
     $ArcOnboardingData.ArcCompatible = $false
 }
 else {
@@ -473,7 +473,7 @@ if ($PSBoundParameters.ContainsKey('AssessOnly')) {
 #Post to share if Machine has dependencies to solve
 
 if (($ArcOnboardingData.AzureVM -eq $false) -and ($ArcOnboardingData.ArcCompatible -eq $false)) {
-    Write-Log -msg "Machine doesn't meet the minimun requirements for Azure Arc: Windows PowerShell 5.1 and NET Framework 4.6, or it is an Azure VM." -msgtype ERROR
+    Write-Log -msg "Machine doesn't meet the minimum requirements for Azure Arc: Windows PowerShell 4 and NET Framework 4.6, or it is an Azure VM." -msgtype ERROR
     Send-ArcData -Data $ArcOnboardingData -Path "$LoggingNetworkPath\$($env:COMPUTERNAME).xml"
     Write-Log -msg "End of the Azure Arc Onboarding process..." -msgtype INFO
 
