@@ -64,6 +64,7 @@ Param (
     [System.String]$ReportServerFQDN,
     [System.String]$AgentProxy,
     [switch]$AssessOnly
+    [switch]$SkipReporting
 )
 
 #Calculate Logging path
@@ -321,6 +322,10 @@ Function Send-ArcData {
         [Parameter(Mandatory = $true)]
         [System.String]$Path
     )
+    if ($PSBoundParameters.ContainsKey('SkipReporting')) {
+        return
+    }
+
     Write-Log -msg "Sending information to central Shared folder ..." -msgtype INFO
     $ParentPath = Split-Path -Path $path -Parent
     if (-not(Test-Path ($ParentPath))) { New-Item -Path $ParentPath -ItemType Directory -Force }
