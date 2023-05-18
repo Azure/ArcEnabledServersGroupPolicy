@@ -67,7 +67,7 @@ Param (
     [System.String]$ArcRemoteShare,
 
     [System.String]$AgentProxy,
-    [switch]$AssessOnly
+    [switch]$AssessOnly,
     [switch]$SkipReporting
 )
 
