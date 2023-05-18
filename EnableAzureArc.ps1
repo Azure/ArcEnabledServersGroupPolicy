@@ -465,7 +465,7 @@ else {
 #In case the onboarding is in AssessOnly mode, the onboarding process posts the data and exits
 if ($PSBoundParameters.ContainsKey('AssessOnly')) {
     Write-Log -msg "Arc GPO Onboarding is in AssessOnly mode. Remove the -AssessOnly parameter from the scheduled task in the GPO if you want the machines to be onboarded in Azure ARC." -msgtype WARNING
-    Send-ArcData -Data $ArcOnboardingData -Path "$LoggingNetworkPath\$($env:COMPUTERNAME).xml"
+    # Send-ArcData -Data $ArcOnboardingData -Path "$LoggingNetworkPath\$($env:COMPUTERNAME).xml"
     Write-Log -msg "End of the Azure Arc Onboarding process..." -msgtype INFO
     exit
 }
@@ -474,7 +474,7 @@ if ($PSBoundParameters.ContainsKey('AssessOnly')) {
 
 if (($ArcOnboardingData.AzureVM -eq $false) -and ($ArcOnboardingData.ArcCompatible -eq $false)) {
     Write-Log -msg "Machine doesn't meet the minimum requirements for Azure Arc: Windows PowerShell 4 and NET Framework 4.6, or it is an Azure VM." -msgtype ERROR
-    Send-ArcData -Data $ArcOnboardingData -Path "$LoggingNetworkPath\$($env:COMPUTERNAME).xml"
+    # Send-ArcData -Data $ArcOnboardingData -Path "$LoggingNetworkPath\$($env:COMPUTERNAME).xml"
     Write-Log -msg "End of the Azure Arc Onboarding process..." -msgtype INFO
 
     exit
@@ -541,7 +541,7 @@ if ((Test-ArcAgentConnection) -eq $false) {
 
 
     #Send information to Share Folder
-    Send-ArcData -Data $ArcOnboardingData -Path "$LoggingNetworkPath\NotConnected\$($env:COMPUTERNAME).NotConnected.xml"
+    # Send-ArcData -Data $ArcOnboardingData -Path "$LoggingNetworkPath\NotConnected\$($env:COMPUTERNAME).NotConnected.xml"
 
 }
 else {
