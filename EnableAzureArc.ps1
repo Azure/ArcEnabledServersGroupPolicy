@@ -88,7 +88,7 @@ $tags = @{ # Tags to be added to the Arc servers
     Responsible = "Responsible"
 }
 
-$workfolder = "$env:systemdrive/temp"
+$workfolder = "$env:SystemDrive\temp"
 $logpath = "$workfolder\AzureArcOnboarding.log" #Local log file
 ###########################################################################################################
 
@@ -394,6 +394,8 @@ if ((Get-Item $logpath -ErrorAction SilentlyContinue).Length -gt 10mb) {
 
 Write-Log -msg "=========================================" -msgtype INFO
 Write-Log -msg "Starting Azure Arc Onboarding process ..." -msgtype INFO
+Write-Log -msg "Sources full path: $SourceFilesFullPath" -msgtype INFO
+Write-Log -msg "Logging network full path: $LoggingNetworkPath" -msgtype INFO
 
 $hash = @{
     Computer            = $env:COMPUTERNAME
