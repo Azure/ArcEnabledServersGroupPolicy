@@ -88,7 +88,7 @@ $tags = @{ # Tags to be added to the Arc servers
     Responsible = "Responsible"
 }
 
-$workfolder = "C:\temp"
+$workfolder = "$env:SystemDrive\temp"
 $logpath = "$workfolder\AzureArcOnboarding.log" #Local log file
 ###########################################################################################################
 
@@ -321,10 +321,15 @@ Function Send-ArcData {
         [Parameter(Mandatory = $true)]
         [System.String]$Path
     )
+
     Write-Log -msg "Sending information to central Shared folder ..." -msgtype INFO
     $ParentPath = Split-Path -Path $path -Parent
-    if (-not(Test-Path ($ParentPath))) { New-Item -Path $ParentPath -ItemType Directory -Force }
     if ($? -eq $false) { Write-Log -msg "$($error[0].Exception)" -msgtype ERROR }
+    
+    if (-not(Test-Path ($ParentPath))) { 
+        New-Item -Path $ParentPath -ItemType Directory -Force 
+        if ($? -eq $false) { Write-Log -msg "$($error[0].Exception)" -msgtype ERROR }
+    }
     $Data | Export-Clixml -Path $Path -Force
     if ($? -eq $false) { Write-Log -msg "$($error[0].Exception)" -msgtype ERROR }
     
@@ -389,6 +394,8 @@ if ((Get-Item $logpath -ErrorAction SilentlyContinue).Length -gt 10mb) {
 
 Write-Log -msg "=========================================" -msgtype INFO
 Write-Log -msg "Starting Azure Arc Onboarding process ..." -msgtype INFO
+Write-Log -msg "Sources full path: $SourceFilesFullPath" -msgtype INFO
+Write-Log -msg "Logging network full path: $LoggingNetworkPath" -msgtype INFO
 
 $hash = @{
     Computer            = $env:COMPUTERNAME
