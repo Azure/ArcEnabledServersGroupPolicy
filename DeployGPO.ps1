@@ -67,8 +67,7 @@ Param (
     [System.String]$ArcRemoteShare,
 
     [System.String]$AgentProxy,
-    [switch]$AssessOnly,
-    [switch]$SkipReporting
+    [switch]$AssessOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -180,6 +179,7 @@ try {
         $xmlcontent -replace "ArcRemoteShare $ArcRemoteShare", "ArcRemoteShare $ArcRemoteShare -AssessOnly" | Out-File $ScheduledTaskfile -Encoding utf8 -Force -ErrorAction Stop
         Write-Host "AssessMode was successfully set in the scheduled task..." -ForegroundColor Green
     }
+
 }
 catch { Write-Host "Could not modify Scheduled task:`n$(($_.Exception).Message)" -ForegroundColor Red ; exit }
 
@@ -204,15 +204,6 @@ else {
         $xmlcontent = Get-Content -Path $ScheduledTaskfile -ErrorAction Stop
         ($xmlcontent -replace "EnableAzureArc.ps1 -ArcRemoteShare", "EnableAzureArc.ps1 -ReportServerFQDN $ReportServerFQDN -ArcRemoteShare") | Out-File $ScheduledTaskfile -Encoding utf8 -Force -ErrorAction Stop
         Write-Host "ReportServerFQDN was successfully added to the scheduled task" -ForegroundColor Green
-    }
-    catch { Write-Host "Could not add ReportServerFQDN:`n$(($_.Exception).Message)" -ForegroundColor Red ; exit }
-}
-
-if ($PSBoundParameters.ContainsKey('SkipReporting')) {
-    try {
-        $xmlcontent = Get-Content -Path $ScheduledTaskfile -ErrorAction Stop
-        $xmlcontent -replace "EnableAzureArc.ps1 -ReportServerFQDN", "EnableAzureArc.ps1 -SkipReporting -ReportServerFQDN" | Out-File $ScheduledTaskfile -Encoding utf8 -Force -ErrorAction Stop
-        Write-Host "SkipReporting was successfully set in the scheduled task..." -ForegroundColor Green
     }
     catch { Write-Host "Could not add ReportServerFQDN:`n$(($_.Exception).Message)" -ForegroundColor Red ; exit }
 }
