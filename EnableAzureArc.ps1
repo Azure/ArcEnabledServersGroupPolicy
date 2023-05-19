@@ -88,7 +88,7 @@ $tags = @{ # Tags to be added to the Arc servers
     Responsible = "Responsible"
 }
 
-$workfolder = "$env:temp"
+$workfolder = "$env:systemdrive/temp"
 $logpath = "$workfolder\AzureArcOnboarding.log" #Local log file
 ###########################################################################################################
 
