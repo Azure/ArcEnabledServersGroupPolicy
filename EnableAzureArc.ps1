@@ -247,11 +247,11 @@ Function Update-ArcAgent {
 }
 Function Get-ServicePrincipalSecret {
     try {
-        Copy-Item (Join-Path $SourceFilesFullPath "AzureArcDeployment.psm1") $workfolder
+        Copy-Item (Join-Path $SourceFilesFullPath "AzureArcDeployment.psm1") $workfolder -Force
         Import-Module (Join-Path $workfolder "AzureArcDeployment.psm1")
         $encryptedSecret = Get-Content (Join-Path $SourceFilesFullPath encryptedServicePrincipalSecret)
         $sps = [DpapiNgUtil]::UnprotectBase64($encryptedSecret)
-        Remove-Item (Join-Path $workfolder "AzureArcDeployment.psm1")
+        Remove-Item (Join-Path $workfolder "AzureArcDeployment.psm1") -Force
     }
     catch {
         Write-Log -msg "Could not fetch service principal secret: $($_.Exception)" -msgtype ERROR
