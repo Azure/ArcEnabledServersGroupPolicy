@@ -81,7 +81,7 @@ $tenantid = $arcInfo.TenantId
 $subscriptionid = $arcInfo.SubscriptionId
 $ResourceGroup = $arcInfo.ResourceGroup
 $location = $arcInfo.Location
-$privateLinkScopeId = $arcInfo.PrivateLinkScopeId
+$PrivateLinkScopeId = $arcInfo.PrivateLinkScopeId
 
 $tags = @{ # Tags to be added to the Arc servers
     Department  = "Department"
@@ -284,6 +284,10 @@ Function Connect-ArcAgent {
 
     $sps = Get-ServicePrincipalSecret
     
+    if ($AgentProxy -ne "") {
+        $Proxyconf = & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" config set proxy.url $AgentProxy #Proxy Configured
+    }
+
     if ($PrivateLinkScopeId) {
         if ($AgentProxy -ne "") {
             & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" config set proxy.bypass "Arc" #Bypass proxy for Arc services (his.arc.azure.com, guestconfiguration.azure.com, guestnotificationservice.azure.com, servicebus.windows.net)
