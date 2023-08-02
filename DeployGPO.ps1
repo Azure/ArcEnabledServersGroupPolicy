@@ -4,10 +4,6 @@
 #requires -module ActiveDirectory
 <#
 .DESCRIPTION
-    ##########################################################################################
-    BE SURE TO PREPARE THE EnableAzureArc.ps1 onboarding script BEFORE LAUNCHING THIS SCRIPT!!
-    ##########################################################################################
-
    This script needs to be executed in a Domain Controller and makes the following actions:
    
     - Deploys the Azure Arc Servers Onboarding GPO in the local domain as 

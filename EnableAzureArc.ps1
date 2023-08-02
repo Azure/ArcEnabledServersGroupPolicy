@@ -284,10 +284,12 @@ Function Connect-ArcAgent {
 
     $sps = Get-ServicePrincipalSecret
     
-    if ($AgentProxy -ne "") {
+    # if agent proxy is specified
+    if ($AgentProxy) {
         $Proxyconf = & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" config set proxy.url $AgentProxy #Proxy Configured
     }
 
+    # if private link scope is specified
     if ($PrivateLinkScopeId) {
         if ($AgentProxy -ne "") {
             & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" config set proxy.bypass "Arc" #Bypass proxy for Arc services (his.arc.azure.com, guestconfiguration.azure.com, guestnotificationservice.azure.com, servicebus.windows.net)
