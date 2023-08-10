@@ -310,9 +310,8 @@ Function Connect-ArcAgent {
         #check for any errors in Agent connection
         Write-Log -msg "Agent Connection was unsuccessful. Waiting for logs to be generated..." -msgtype ERROR
         $script:Agentcode = $null
-        $deadline = (Get-Date).AddMinutes(2)
         do { $script:Agentcode = Get-Content "$env:ProgramData\AzureConnectedMachineAgent\Log\azcmagent.log"-Tail 50 | Select-String 'AZCM\d*:[\s\w]*' | ForEach-Object { $_.matches } | Select-Object -Last 1 -ExpandProperty value }
-        Until ($null -ne $script:Agentcode -and $deadline -gt (Get-Date))
+        Until ($null -ne $script:Agentcode)
         Write-Log -msg "Agent Code: $script:Agentcode" -msgtype ERROR
         Write-Log -msg "Check AZCM Agent codes here: https://docs.microsoft.com/en-us/azure/azure-arc/servers/troubleshoot-agent-onboard#agent-error-codes" -msgtype INFO
         
