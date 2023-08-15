@@ -81,6 +81,7 @@ $tenantid = $arcInfo.TenantId
 $subscriptionid = $arcInfo.SubscriptionId
 $ResourceGroup = $arcInfo.ResourceGroup
 $location = $arcInfo.Location
+$PrivateLinkScopeId = $arcInfo.PrivateLinkScopeId
 
 $tags = @{ # Tags to be added to the Arc servers
     Department  = "Department"
@@ -283,11 +284,21 @@ Function Connect-ArcAgent {
 
     $sps = Get-ServicePrincipalSecret
     
-    if ($AgentProxy -ne "") {
-        $Proxyconf = & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" config set proxy.url $AgentProxy
+    # if agent proxy is specified
+    if ($AgentProxy) {
+        $Proxyconf = & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" config set proxy.url $AgentProxy #Proxy Configured
     }
-    $ConnectionOutput = & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect --service-principal-id $servicePrincipalClientId --service-principal-secret $sps --resource-group $ResourceGroup --tenant-id $tenantid --location $location --subscription-id $subscriptionid --cloud AzureCloud --tags $FinalTag --correlation-id "478b97c2-9310-465a-87df-f21e66c2b248"
-    
+
+    # if private link scope is specified
+    if ($PrivateLinkScopeId) {
+        if ($AgentProxy -ne "") {
+            & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" config set proxy.bypass "Arc" #Bypass proxy for Arc services (his.arc.azure.com, guestconfiguration.azure.com, guestnotificationservice.azure.com, servicebus.windows.net)
+        }
+        $ConnectionOutput = & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect --resource-name $env:computername --service-principal-id $servicePrincipalClientId --service-principal-secret $sps --resource-group $ResourceGroup --tenant-id $tenantid --location $location --subscription-id $subscriptionid --cloud AzureCloud --tags $FinalTag --private-link-scope $PrivateLinkScopeId --correlation-id "478b97c2-9310-465a-87df-f21e66c2b248"
+    }
+    else {
+        $ConnectionOutput = & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect --resource-name $env:computername --service-principal-id $servicePrincipalClientId --service-principal-secret $sps --resource-group $ResourceGroup --tenant-id $tenantid --location $location --subscription-id $subscriptionid --cloud AzureCloud --tags $FinalTag --correlation-id "478b97c2-9310-465a-87df-f21e66c2b248"
+    }
 
     if ($LastExitCode -eq 0) {
         Write-Log -msg "Agent connected successfully!. To view your onboarded server(s), navigate to https://ms.portal.azure.com/#blade/Microsoft_Azure_HybridCompute/AzureArcCenterBlade/servers" -msgtype INFO
@@ -298,11 +309,16 @@ Function Connect-ArcAgent {
          
         #check for any errors in Agent connection
         Write-Log -msg "Agent Connection was unsuccessful. Waiting for logs to be generated..." -msgtype ERROR
-        $script:Agentcode = $null
-        do { $script:Agentcode = Get-Content "$env:ProgramData\AzureConnectedMachineAgent\Log\azcmagent.log"-Tail 50 | Select-String 'AZCM\d*:[\s\w]*' | ForEach-Object { $_.matches } | Select-Object -Last 1 -ExpandProperty value }
-        Until ($null -ne $script:Agentcode)
-        Write-Log -msg "Agent Code: $script:Agentcode" -msgtype ERROR
-        Write-Log -msg "Check AZCM Agent codes here: https://docs.microsoft.com/en-us/azure/azure-arc/servers/troubleshoot-agent-onboard#agent-error-codes" -msgtype INFO
+
+        Start-Job -ScriptBlock {
+            $script:Agentcode = $null
+            do { 
+                $script:Agentcode = Get-Content "$env:ProgramData\AzureConnectedMachineAgent\Log\azcmagent.log"-Tail 50 | Select-String 'AZCM\d*:[\s\w]*' | ForEach-Object { $_.matches } | Select-Object -Last 1 -ExpandProperty value 
+            }
+            Until ($null -ne $script:Agentcode)
+            Write-Log -msg "Agent Code: $script:Agentcode" -msgtype ERROR
+            Write-Log -msg "Check AZCM Agent codes here: https://docs.microsoft.com/en-us/azure/azure-arc/servers/troubleshoot-agent-onboard#agent-error-codes" -msgtype INFO
+        } | Wait-Job -Timeout 30
         
         return $false
     }
