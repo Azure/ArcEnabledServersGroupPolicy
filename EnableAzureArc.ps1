@@ -480,6 +480,7 @@ If ($Null -ne $TestAzuremachine) {
     Write-Log -msg "Machine is an Azure VM, it won't be onboarded in Azure Arc" -msgtype ERROR
     $ArcOnboardingData.AzureVM = $true
     $ArcOnboardingData.ArcCompatible = $false
+    Write-Log -msg "Exiting Onboarding Process" -msgtype INFO
     exit
 }
 else {
