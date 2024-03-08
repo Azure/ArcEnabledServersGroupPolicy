@@ -84,13 +84,11 @@ $location = $arcInfo.Location
 $PrivateLinkScopeId = $arcInfo.PrivateLinkScopeId
 
 $tags = @{ # Tags to be added to the Arc servers
-    Department  = "Department"
-    deployedBY  = "GPO"
-    Responsible = "Responsible"
+    DeployedBy  = "GPO"
 }
 
 if($arcInfo.Tags){
-    $tags = $arcInfo.Tags
+    $arcInfo.Tags.psobject.properties | Foreach { $tags[$_.Name] = $_.Value }
 }
 
 $workfolder = "$env:SystemDrive\temp"
