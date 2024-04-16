@@ -113,7 +113,7 @@ Set-Acl -Path $AzureArcLoggingPath -AclObject $Acl
 
 
 
-#Add Access to Domain Computers and Domain Controllers
+#Add Access to Domain Computers, Domain Controllers and Read-only Domain Controllers
 $DomainNetbios = (Get-ADDomain $DomainFQDN).NetBIOSName
 $DomainComputersSID = (Get-ADDomain).DomainSID.Value + '-515'
 $DomainComputersName = (Get-ADGroup -Filter "SID -eq `'$DomainComputersSID`'").Name
@@ -228,11 +228,12 @@ try {
 catch { Write-Host "The Group Policy could not be created:`n$(($_.Exception).Message)" -ForegroundColor Red ; break }
 
 
-# Encrypting the ServicePrincipalSecret to be decrypted only by the Domain Controllers and the Domain Computers security groups
+# Encrypting the ServicePrincipalSecret to be decrypted only by the Domain Computers, Domain Controllers and Read-only Domain Controllers security groups
 
 $DomainComputersSID = "SID=" + $DomainComputersSID
 $DomainControllersSID = "SID=" + $DomainControllersSID
-$descriptor = @($DomainComputersSID, $DomainControllersSID) -join " OR "
+$ReadOnlyDomainControllersSID = "SID=" + $ReadOnlyDomainComputersSID
+$descriptor = @($DomainComputersSID, $DomainControllersSID, $ReadOnlyDomainControllersSID) -join " OR "
 
 Import-Module $PSScriptRoot\AzureArcDeployment.psm1
 $encryptedSecret = [DpapiNgUtil]::ProtectBase64($descriptor, $ServicePrincipalSecret)
