@@ -119,11 +119,14 @@ $DomainComputersSID = (Get-ADDomain).DomainSID.Value + '-515'
 $DomainComputersName = (Get-ADGroup -Filter "SID -eq `'$DomainComputersSID`'").Name
 $DomainControllersSID = (Get-ADDomain).DomainSID.Value + '-516'
 $DomainControllersName = (Get-ADGroup -Filter "SID -eq `'$DomainControllersSID`'").Name
+$ReadOnlyDomainControllersSID = (Get-ADDomain).DomainSID.Value + '-521'
+$ReadOnlyDomainControllersName = (Get-ADGroup -Filter "SID -eq `'$ReadOnlyDomainControllersSID`'").Name
 $CreatorOwnerSID = New-Object -TypeName System.Security.Principal.SecurityIdentifier -ArgumentList 'S-1-3-0'
 $CreatorOwnerName = $CreatorOwnerSID.Translate([System.Security.Principal.NTAccount])
 
 $identity = "$DomainNetbios\$DomainComputersName"
 $identity2 = "$DomainNetbios\$DomainControllersName"
+$identity3 = "$DomainNetbios\$ReadOnlyDomainControllersName"
 
 
 #Deploy Path
@@ -131,7 +134,8 @@ $NewAcl = Get-ACL -Path $AzureArcDeployPath
 $fileSystemAccessRules = 
 @(   
     [System.Security.AccessControl.FileSystemAccessRule]::new($identity, 'ReadandExecute', "ContainerInherit,ObjectInherit", 'None', 'Allow')
-    [System.Security.AccessControl.FileSystemAccessRule]::new($identity2, 'ReadandExecute', "ContainerInherit,ObjectInherit", 'None', 'Allow')  
+    [System.Security.AccessControl.FileSystemAccessRule]::new($identity2, 'ReadandExecute', "ContainerInherit,ObjectInherit", 'None', 'Allow')
+    [System.Security.AccessControl.FileSystemAccessRule]::new($identity3, 'ReadandExecute', "ContainerInherit,ObjectInherit", 'None', 'Allow')
 )
 foreach ($fileSystemAccessRule in $fileSystemAccessRules) {
 
@@ -145,7 +149,8 @@ $NewAcl = Get-ACL -Path $AzureArcLoggingPath
 $fileSystemAccessRules = 
 @(   
     [System.Security.AccessControl.FileSystemAccessRule]::new($identity, 'ReadandExecute,CreateFiles,CreateDirectories', "ContainerInherit", 'None', 'Allow')
-    [System.Security.AccessControl.FileSystemAccessRule]::new($identity2, 'ReadandExecute,CreateFiles,CreateDirectories', "ContainerInherit", 'None', 'Allow')  
+    [System.Security.AccessControl.FileSystemAccessRule]::new($identity2, 'ReadandExecute,CreateFiles,CreateDirectories', "ContainerInherit", 'None', 'Allow')
+    [System.Security.AccessControl.FileSystemAccessRule]::new($identity3, 'ReadandExecute,CreateFiles,CreateDirectories', "ContainerInherit", 'None', 'Allow')
     [System.Security.AccessControl.FileSystemAccessRule]::new($CreatorOwnerName, 'ReadandExecute,Write,Modify', "ObjectInherit", 'None', 'Allow')
 )
 foreach ($fileSystemAccessRule in $fileSystemAccessRules) {
