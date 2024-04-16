@@ -232,7 +232,7 @@ catch { Write-Host "The Group Policy could not be created:`n$(($_.Exception).Mes
 
 $DomainComputersSID = "SID=" + $DomainComputersSID
 $DomainControllersSID = "SID=" + $DomainControllersSID
-$ReadOnlyDomainControllersSID = "SID=" + $ReadOnlyDomainComputersSID
+$ReadOnlyDomainControllersSID = "SID=" + $ReadOnlyDomainControllersSID
 $descriptor = @($DomainComputersSID, $DomainControllersSID, $ReadOnlyDomainControllersSID) -join " OR "
 
 Import-Module $PSScriptRoot\AzureArcDeployment.psm1
