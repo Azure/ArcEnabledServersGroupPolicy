@@ -228,7 +228,7 @@ try {
 catch { Write-Host "The Group Policy could not be created:`n$(($_.Exception).Message)" -ForegroundColor Red ; break }
 
 
-# Encrypting the ServicePrincipalSecret to be decrypted only by the Domain Computers, Domain Controllers and Read-only Domain Controllers security groups
+# Encrypting the ServicePrincipalSecret to be decrypted only by the Domain Controllers, Read-only Domain Controllers and Domain Computers security groups
 
 $DomainComputersSID = "SID=" + $DomainComputersSID
 $DomainControllersSID = "SID=" + $DomainControllersSID
