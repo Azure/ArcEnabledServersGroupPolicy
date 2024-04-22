@@ -124,6 +124,7 @@ $ReadOnlyDomainControllersName = (Get-ADGroup -Filter "SID -eq `'$ReadOnlyDomain
 $CreatorOwnerSID = New-Object -TypeName System.Security.Principal.SecurityIdentifier -ArgumentList 'S-1-3-0'
 $CreatorOwnerName = $CreatorOwnerSID.Translate([System.Security.Principal.NTAccount])
 
+
 $identity = "$DomainNetbios\$DomainComputersName"
 $identity2 = "$DomainNetbios\$DomainControllersName"
 $identity3 = "$DomainNetbios\$ReadOnlyDomainControllersName"
