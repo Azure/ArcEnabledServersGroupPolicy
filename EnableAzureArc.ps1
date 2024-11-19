@@ -250,7 +250,7 @@ Function Update-ArcAgent {
 
 }
 Function Get-ServicePrincipalSecret {
-    if(EncryptionMethod -eq "base64"){
+    if($EncryptionMethod -eq "base64"){
         Write-Log -msg "Using base64 to decrypt" -msgtype INFO
         $encryptedSecret = Get-Content (Join-Path $SourceFilesFullPath encryptedServicePrincipalSecret)
         $sps = -join ( [Convert]::FromBase64String('SGVsbG8gd29ybGQ=') -as [char[]])
