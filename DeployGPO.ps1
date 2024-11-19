@@ -64,6 +64,10 @@ Param (
 
     [System.String]$AgentProxy,
 
+    [Parameter(Mandatory = $False)]
+    [ValidateSet("base64", "dpapi")]
+    [System.String]$EncryptionMethod = "dpapi",
+
     [Hashtable]$Tags,
 
     [System.String]$PrivateLinkScopeId,
@@ -223,12 +227,15 @@ catch { Write-Host "The Group Policy could not be created:`n$(($_.Exception).Mes
 
 # Encrypting the ServicePrincipalSecret to be decrypted only by the Domain Controllers and the Domain Computers security groups
 
-$DomainComputersSID = "SID=" + $DomainComputersSID
-$DomainControllersSID = "SID=" + $DomainControllersSID
-$descriptor = @($DomainComputersSID, $DomainControllersSID) -join " OR "
+$encryptedSecret = [Convert]::ToBase64String([char[]]"$ServicePrincipalSecret")
+if ($EncryptionMethod -eq "dpapi"){
+    $DomainComputersSID = "SID=" + $DomainComputersSID
+    $DomainControllersSID = "SID=" + $DomainControllersSID
+    $descriptor = @($DomainComputersSID, $DomainControllersSID) -join " OR "
 
-Import-Module $PSScriptRoot\AzureArcDeployment.psm1
-$encryptedSecret = [DpapiNgUtil]::ProtectBase64($descriptor, $ServicePrincipalSecret)
+    Import-Module $PSScriptRoot\AzureArcDeployment.psm1
+    $encryptedSecret = [DpapiNgUtil]::ProtectBase64($descriptor, $ServicePrincipalSecret)
+}
 
 #Copying Script to Source files Subfolder path
 Write-Host "`nCopying Script EnableAzureArc.ps1 to path $AzureArcDeployPath ..." -ForegroundColor Green
@@ -258,7 +265,16 @@ try {
         Write-Host "Install file `'AzureConnectedMachineAgent.msi`' successfully copied to $AzureArcDeployPath" -ForegroundColor Green
     }
 
-    $infoTable = @{"ServicePrincipalClientId"="$ServicePrincipalClientId";"SubscriptionId"="$SubscriptionId";"ResourceGroup"="$ResourceGroup";"Location"="$Location";"TenantId"="$TenantId";"PrivateLinkScopeId"="$PrivateLinkScopeId"; "Tags"=$tags}
+    $infoTable = @{
+        "ServicePrincipalClientId" = "$ServicePrincipalClientId"
+        "SubscriptionId" = "$SubscriptionId"
+        "ResourceGroup" = "$ResourceGroup"
+        "Location" = "$Location"
+        "TenantId" = "$TenantId"
+        "PrivateLinkScopeId" = "$PrivateLinkScopeId"
+        "Tags" = $tags
+        "EncryptionMethod" = $EncryptionMethod
+    }
     $infoTableJSON = $infoTable | ConvertTo-Json -Compress
     
     if (Test-Path "$AzureArcDeployPath\ArcInfo.json" -ErrorAction SilentlyContinue) {

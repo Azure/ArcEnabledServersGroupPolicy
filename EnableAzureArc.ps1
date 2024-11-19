@@ -82,6 +82,7 @@ $subscriptionid = $arcInfo.SubscriptionId
 $ResourceGroup = $arcInfo.ResourceGroup
 $location = $arcInfo.Location
 $PrivateLinkScopeId = $arcInfo.PrivateLinkScopeId
+$EncryptionMethod = $arcInfo.EncryptionMethod
 
 $tags = @{ # Tags to be added to the Arc servers
     DeployedBy  = "GPO"
@@ -249,6 +250,11 @@ Function Update-ArcAgent {
 
 }
 Function Get-ServicePrincipalSecret {
+    if(EncryptionMethod -eq "base64"){
+        $encryptedSecret = Get-Content (Join-Path $SourceFilesFullPath encryptedServicePrincipalSecret)
+        $sps = -join ( [Convert]::FromBase64String('SGVsbG8gd29ybGQ=') -as [char[]])
+        return $sps
+    }
     try {
         Copy-Item (Join-Path $SourceFilesFullPath "AzureArcDeployment.psm1") $workfolder -Force
         Import-Module (Join-Path $workfolder "AzureArcDeployment.psm1")
