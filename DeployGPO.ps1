@@ -74,6 +74,21 @@ Param (
     [switch]$AssessOnly
 )
 
+if($EncryptionMethod -eq "base64"){
+    $prompt = @"
+EncryptionMethod base64 specified. Please be aware that it does not offer any security 
+and the secret will be easily decodable to anyone with read permissions to the remote share.  
+If this is a concern, 'dpapi' could be the more appropriate choice.
+Do you wish to continue with base64 encoding? (y/n)
+"@
+    $proceed = Read-Host $prompt
+    if($proceed -ne "y"){
+        Write-Host "Exiting DeployGPO.ps1"
+        return
+    }
+        Write-Host "Proceeding with base64 encoding"
+}
+
 $ErrorActionPreference = "Stop"
 
 $GPOName = "[MSFT] Azure Arc Servers Onboarding"
