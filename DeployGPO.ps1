@@ -65,8 +65,7 @@ Param (
     [System.String]$AgentProxy,
 
     [Parameter(Mandatory = $False)]
-    [ValidateSet("base64", "dpapi")]
-    [System.String]$EncryptionMethod = "dpapi",
+    [switch]$NoEncryption = $False,
 
     [Hashtable]$Tags,
 
@@ -74,9 +73,9 @@ Param (
     [switch]$AssessOnly
 )
 
-if($EncryptionMethod -eq "base64"){
+if($NoEncryption){
     $prompt = @"
-EncryptionMethod base64 specified. Please be aware that it does not offer any security 
+NoEncryption switch specified. Please be aware that the secret will only be encoded in base64
 and the secret will be easily decodable to anyone with read permissions to the remote share.  
 If this is a concern, 'dpapi' could be the more appropriate choice.
 Do you wish to continue with base64 encoding? (y/n)
@@ -86,7 +85,7 @@ Do you wish to continue with base64 encoding? (y/n)
         Write-Host "Exiting DeployGPO.ps1"
         return
     }
-        Write-Host "Proceeding with base64 encoding"
+    Write-Host "Proceeding with base64 encoding"
 }
 
 $ErrorActionPreference = "Stop"
@@ -243,7 +242,7 @@ catch { Write-Host "The Group Policy could not be created:`n$(($_.Exception).Mes
 # Encrypting the ServicePrincipalSecret to be decrypted only by the Domain Controllers and the Domain Computers security groups
 
 $encryptedSecret = [Convert]::ToBase64String([char[]]"$ServicePrincipalSecret")
-if ($EncryptionMethod -eq "dpapi"){
+if ($NoEncryption){
     $DomainComputersSID = "SID=" + $DomainComputersSID
     $DomainControllersSID = "SID=" + $DomainControllersSID
     $descriptor = @($DomainComputersSID, $DomainControllersSID) -join " OR "
@@ -288,7 +287,7 @@ try {
         "TenantId" = "$TenantId"
         "PrivateLinkScopeId" = "$PrivateLinkScopeId"
         "Tags" = $tags
-        "EncryptionMethod" = $EncryptionMethod
+        "NoEncryption" = $NoEncryption
     }
     $infoTableJSON = $infoTable | ConvertTo-Json -Compress
     

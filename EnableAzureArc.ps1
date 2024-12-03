@@ -82,7 +82,7 @@ $subscriptionid = $arcInfo.SubscriptionId
 $ResourceGroup = $arcInfo.ResourceGroup
 $location = $arcInfo.Location
 $PrivateLinkScopeId = $arcInfo.PrivateLinkScopeId
-$EncryptionMethod = $arcInfo.EncryptionMethod
+$NoEncryption = $arcInfo.NoEncryption
 
 $tags = @{ # Tags to be added to the Arc servers
     DeployedBy  = "GPO"
@@ -250,7 +250,7 @@ Function Update-ArcAgent {
 
 }
 Function Get-ServicePrincipalSecret {
-    if($EncryptionMethod -eq "base64"){
+    if($NoEncryption){
         Write-Log -msg "Using base64 to decrypt" -msgtype INFO
         $encryptedSecret = Get-Content (Join-Path $SourceFilesFullPath encryptedServicePrincipalSecret)
         $sps = -join ( [Convert]::FromBase64String($encryptedSecret) -as [char[]])
