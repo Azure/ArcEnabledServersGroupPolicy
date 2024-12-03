@@ -241,7 +241,7 @@ catch { Write-Host "The Group Policy could not be created:`n$(($_.Exception).Mes
 # Encrypting the ServicePrincipalSecret to be decrypted only by the Domain Controllers and the Domain Computers security groups
 
 $encryptedSecret = [Convert]::ToBase64String([char[]]"$ServicePrincipalSecret")
-if ($NoEncryption){
+if (-not $NoEncryption){
     $DomainComputersSID = "SID=" + $DomainComputersSID
     $DomainControllersSID = "SID=" + $DomainControllersSID
     $descriptor = @($DomainComputersSID, $DomainControllersSID) -join " OR "
