@@ -286,7 +286,7 @@ try {
         "TenantId" = "$TenantId"
         "PrivateLinkScopeId" = "$PrivateLinkScopeId"
         "Tags" = $tags
-        "NoEncryption" = $NoEncryption
+        "NoEncryption" = [bool]"$NoEncryption"
     }
     $infoTableJSON = $infoTable | ConvertTo-Json -Compress
     
