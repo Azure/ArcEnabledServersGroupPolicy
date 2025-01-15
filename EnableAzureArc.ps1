@@ -82,7 +82,7 @@ $subscriptionid = $arcInfo.SubscriptionId
 $ResourceGroup = $arcInfo.ResourceGroup
 $location = $arcInfo.Location
 $PrivateLinkScopeId = $arcInfo.PrivateLinkScopeId
-$NoEncryption = $arcInfo.NoEncryption
+$NoEncryption =[System.Convert]::ToBoolean($arcInfo.NoEncryption)
 
 $tags = @{ # Tags to be added to the Arc servers
     DeployedBy  = "GPO"
