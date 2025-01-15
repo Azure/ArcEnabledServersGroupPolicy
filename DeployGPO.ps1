@@ -176,7 +176,7 @@ try {
 
     if ($PSBoundParameters.ContainsKey('AssessOnly')) {
         $xmlcontent = Get-Content -Path $ScheduledTaskfile -ErrorAction Stop
-        $xmlcontent -replace "ArcRemoteShare $ArcRemoteShare", "ArcRemoteShare $ArcRemoteShare -AssessOnly" | Out-File $ScheduledTaskfile -Encoding utf8 -Force -ErrorAction Stop
+        $xmlcontent -replace "ArcRemoteShare '$([Regex]::Escape($ArcRemoteShare))'", "ArcRemoteShare '$ArcRemoteShare' -AssessOnly" | Out-File $ScheduledTaskfile -Encoding utf8 -Force -ErrorAction Stop
         Write-Host "AssessMode was successfully set in the scheduled task..." -ForegroundColor Green
     }
 
