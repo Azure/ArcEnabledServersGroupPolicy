@@ -264,14 +264,13 @@ Function Get-ServicePrincipalSecret {
 }
 Function Add-SiteTag {
 
-    $adsite = (& "$env:windir\system32\nltest.exe" /dsgetsite)[0]
-
-    if ($LastExitCode -eq 0) {
+    try {
+        $adsite = [System.__ComObject].InvokeMember("SiteName", [System.Reflection.BindingFlags]::GetProperty, $null, (New-Object -ComObject "ADSystemInfo"), $null)
         Write-Log -msg "Tag Site:$adsite added to azure connected machine tags" -msgtype INFO
         $script:tags["Site"] = $adsite
     }
-    else {
-        Write-Log -msg "Could not determine machine's AD Site" -msgtype WARNING
+    catch {
+        Write-Log -msg "Could not determine machine's AD Site: $($_.Exception)" -msgtype WARNING
         $script:tags["Site"] = "Unknown"
     }
 
