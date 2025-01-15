@@ -209,7 +209,7 @@ Function Update-ArcAgentVersion {
     #Compare versions
 
 
-    if ($LocalAgentVersion -ne $NetworkShareVersion) {
+    if ($LocalAgentVersion -lt $NetworkShareVersion) {
         # New Agent Version Found
         Write-Log -msg "New Agent version found in network share folder: $($NetworkShareVersion.ToString()) , local version is $($LocalAgentVersion.ToString()). Executing update ..." -msgtype WARNING
     
