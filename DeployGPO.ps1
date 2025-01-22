@@ -64,11 +64,28 @@ Param (
 
     [System.String]$AgentProxy,
 
+    [Parameter(Mandatory = $False)]
+    [switch]$NoEncryption = $False,
+
     [Hashtable]$Tags,
 
     [System.String]$PrivateLinkScopeId,
     [switch]$AssessOnly
 )
+
+if($NoEncryption){
+    $prompt = @"
+NoEncryption switch specified. Please be aware that the secret will only be encoded in base64
+and the secret will be easily decodable to anyone with read permissions to the remote share.  
+Do you wish to continue with base64 encoding? (y/n)
+"@
+    $proceed = Read-Host $prompt
+    if($proceed -ne "y"){
+        Write-Host "Exiting DeployGPO.ps1"
+        return
+    }
+    Write-Host "Proceeding with base64 encoding"
+}
 
 $ErrorActionPreference = "Stop"
 
@@ -113,25 +130,23 @@ Set-Acl -Path $AzureArcLoggingPath -AclObject $Acl
 
 
 
-#Add Access to Domain Computers and Domain Controllers
-$DomainNetbios = (Get-ADDomain $DomainFQDN).NetBIOSName
-$DomainComputersSID = (Get-ADDomain).DomainSID.Value + '-515'
-$DomainComputersName = (Get-ADGroup -Filter "SID -eq `'$DomainComputersSID`'").Name
-$DomainControllersSID = (Get-ADDomain).DomainSID.Value + '-516'
-$DomainControllersName = (Get-ADGroup -Filter "SID -eq `'$DomainControllersSID`'").Name
+# Fetching Domain Information
+$DomainSID = (Get-ADDomain $DomainFQDN).DomainSID.Value
+$DomainComputersSID = $DomainSID + '-515'
+$DomainControllersSID = $DomainSID + '-516'
 
-
-$identity = "$DomainNetbios\$DomainComputersName"
-$identity2 = "$DomainNetbios\$DomainControllersName"
-
+# Convert SIDs to SecurityIdentifier objects
+$DomainComputersSIDObj = New-Object System.Security.Principal.SecurityIdentifier($DomainComputersSID)
+$DomainControllersSIDObj = New-Object System.Security.Principal.SecurityIdentifier($DomainControllersSID)
 
 #Deploy Path
 $NewAcl = Get-ACL -Path $AzureArcDeployPath
 $fileSystemAccessRules = 
-@(   
-    [System.Security.AccessControl.FileSystemAccessRule]::new($identity, 'ReadandExecute', "ContainerInherit,ObjectInherit", 'None', 'Allow')
-    [System.Security.AccessControl.FileSystemAccessRule]::new($identity2, 'ReadandExecute', "ContainerInherit,ObjectInherit", 'None', 'Allow')  
+@(
+    [System.Security.AccessControl.FileSystemAccessRule]::new($DomainComputersSIDObj, 'ReadAndExecute', "ContainerInherit,ObjectInherit", 'None', 'Allow'),
+    [System.Security.AccessControl.FileSystemAccessRule]::new($DomainControllersSIDObj, 'ReadAndExecute', "ContainerInherit,ObjectInherit", 'None', 'Allow')
 )
+
 foreach ($fileSystemAccessRule in $fileSystemAccessRules) {
 
     $NewAcl.SetAccessRule($fileSystemAccessRule)
@@ -143,8 +158,8 @@ foreach ($fileSystemAccessRule in $fileSystemAccessRules) {
 $NewAcl = Get-ACL -Path $AzureArcLoggingPath
 $fileSystemAccessRules = 
 @(   
-    [System.Security.AccessControl.FileSystemAccessRule]::new($identity, 'ReadandExecute,Write,Modify', "ContainerInherit,ObjectInherit", 'None', 'Allow')
-    [System.Security.AccessControl.FileSystemAccessRule]::new($identity2, 'ReadandExecute,Write,Modify', "ContainerInherit,ObjectInherit", 'None', 'Allow')  
+    [System.Security.AccessControl.FileSystemAccessRule]::new($DomainComputersSIDObj, 'ReadandExecute,Write,Modify', "ContainerInherit,ObjectInherit", 'None', 'Allow')
+    [System.Security.AccessControl.FileSystemAccessRule]::new($DomainControllersSIDObj, 'ReadandExecute,Write,Modify', "ContainerInherit,ObjectInherit", 'None', 'Allow')  
 )
 foreach ($fileSystemAccessRule in $fileSystemAccessRules) {
     $NewAcl.SetAccessRule($fileSystemAccessRule)
@@ -223,12 +238,15 @@ catch { Write-Host "The Group Policy could not be created:`n$(($_.Exception).Mes
 
 # Encrypting the ServicePrincipalSecret to be decrypted only by the Domain Controllers and the Domain Computers security groups
 
-$DomainComputersSID = "SID=" + $DomainComputersSID
-$DomainControllersSID = "SID=" + $DomainControllersSID
-$descriptor = @($DomainComputersSID, $DomainControllersSID) -join " OR "
+$encryptedSecret = [Convert]::ToBase64String([char[]]"$ServicePrincipalSecret")
+if (-not $NoEncryption){
+    $DomainComputersSID = "SID=" + $DomainComputersSID
+    $DomainControllersSID = "SID=" + $DomainControllersSID
+    $descriptor = @($DomainComputersSID, $DomainControllersSID) -join " OR "
 
-Import-Module $PSScriptRoot\AzureArcDeployment.psm1
-$encryptedSecret = [DpapiNgUtil]::ProtectBase64($descriptor, $ServicePrincipalSecret)
+    Import-Module $PSScriptRoot\AzureArcDeployment.psm1
+    $encryptedSecret = [DpapiNgUtil]::ProtectBase64($descriptor, $ServicePrincipalSecret)
+}
 
 #Copying Script to Source files Subfolder path
 Write-Host "`nCopying Script EnableAzureArc.ps1 to path $AzureArcDeployPath ..." -ForegroundColor Green
@@ -258,7 +276,16 @@ try {
         Write-Host "Install file `'AzureConnectedMachineAgent.msi`' successfully copied to $AzureArcDeployPath" -ForegroundColor Green
     }
 
-    $infoTable = @{"ServicePrincipalClientId"="$ServicePrincipalClientId";"SubscriptionId"="$SubscriptionId";"ResourceGroup"="$ResourceGroup";"Location"="$Location";"TenantId"="$TenantId";"PrivateLinkScopeId"="$PrivateLinkScopeId"; "Tags"=$tags}
+    $infoTable = @{
+        "ServicePrincipalClientId" = "$ServicePrincipalClientId"
+        "SubscriptionId" = "$SubscriptionId"
+        "ResourceGroup" = "$ResourceGroup"
+        "Location" = "$Location"
+        "TenantId" = "$TenantId"
+        "PrivateLinkScopeId" = "$PrivateLinkScopeId"
+        "Tags" = $tags
+        "NoEncryption" = $NoEncryption
+    }
     $infoTableJSON = $infoTable | ConvertTo-Json -Compress
     
     if (Test-Path "$AzureArcDeployPath\ArcInfo.json" -ErrorAction SilentlyContinue) {
