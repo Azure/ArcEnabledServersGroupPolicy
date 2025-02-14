@@ -14,7 +14,7 @@
         - Checks PowerShell Version
  
     If the server doesn't pass the requirements, all the information from the server: OS, Framework version,
-    PowerShell version, VM type ... is stored in a network share for further analisys.
+    PowerShell version, VM type ... is stored in a network share for further analysis.
 
     If the server pass the requirements, the script checks if the Azure Hybrid Instance Metadata Service is already installed
 
