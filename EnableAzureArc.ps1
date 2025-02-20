@@ -152,13 +152,13 @@ Function Install-ArcAgent {
     }
 
     # If no local msi found, downloads it from the network share
-    if (-not (Test-Path "$env:TEMP\AzureConnectedMachineAgent.msi" -ErrorAction SilentlyContinue)) {
-        Copy-Item -Path "$SourceFilesFullPath\AzureConnectedMachineAgent.msi" -Destination "$env:TEMP" -Force
+    if (-not (Test-Path "$env:LOCALAPPDATA\AzureConnectedMachineAgent.msi" -ErrorAction SilentlyContinue)) {
+        Copy-Item -Path "$SourceFilesFullPath\AzureConnectedMachineAgent.msi" -Destination "$env:LOCALAPPDATA" -Force
     }
 
     Write-Log -msg "Installing Azure Connected Machine Agent" -msgtype INFO
     Set-Location $workfolder
-    $exitCode = (Start-Process -FilePath msiexec.exe -ArgumentList @("/i", "$env:TEMP\AzureConnectedMachineAgent.msi" , "/l*v", "Azcmagentinstallationlog.txt", "/qn") -Wait -Passthru).ExitCode
+    $exitCode = (Start-Process -FilePath msiexec.exe -ArgumentList @("/i", "$env:LOCALAPPDATA\AzureConnectedMachineAgent.msi" , "/l*v", "Azcmagentinstallationlog.txt", "/qn") -Wait -Passthru).ExitCode
     $message = (net helpmsg $exitCode)
     if ($exitCode -ne 0) {
 
@@ -211,7 +211,7 @@ Function Update-ArcAgentVersion {
     
 
         # Download the package
-        Copy-Item -Path "$SourceFilesFullPath\AzureConnectedMachineAgent.msi" -Destination "$env:TEMP" -Force
+        Copy-Item -Path "$SourceFilesFullPath\AzureConnectedMachineAgent.msi" -Destination "$env:LOCALAPPDATA" -Force
     
         #Install the package
         Update-ArcAgent
@@ -232,7 +232,7 @@ Function Update-ArcAgent {
 
     Write-Log -msg "Updating Azure Connected Machine Agent" -msgtype INFO
     Set-Location $workfolder
-    $exitCode = (Start-Process -FilePath msiexec.exe -ArgumentList @("/i", "$env:TEMP\AzureConnectedMachineAgent.msi" , "/l*v", "Azcmagentupdatesetup.txt", "/qn") -Wait -Passthru).ExitCode
+    $exitCode = (Start-Process -FilePath msiexec.exe -ArgumentList @("/i", "$env:LOCALAPPDATA\AzureConnectedMachineAgent.msi" , "/l*v", "Azcmagentupdatesetup.txt", "/qn") -Wait -Passthru).ExitCode
     $message = (net helpmsg $exitCode)
     if ($exitCode -ne 0) {
 
