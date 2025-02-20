@@ -35,10 +35,6 @@
 
 .PARAMETER ReportServerFQDN
    FQDN of the Server that will act as report Server (and source files)
-   
-.PARAMETER AgentProxy
-   Url of the proxy in case is used. 
-   e.g. : https://proxy.contoso.com:8080
 
 .PARAMETER AssessOnly
    Switch parameter that makes script work in Assess mode.
@@ -46,9 +42,9 @@
    Machines will only report if their prerequesites are met or not to the report share
 
 .EXAMPLE
-   This example onboards machines in Azure Arc using the proxy specified
+   This example onboards machines in Azure Arc 
    
-   .\EnableAzureArc.ps1 -ArcRemoteShare AzureArcOnBoard -AgentProxy https://proxy.contoso.com:8080
+   .\EnableAzureArc.ps1 -ArcRemoteShare AzureArcOnBoard 
 
 .EXAMPLE
    This example assesses machines Azure Arc prerequisites and sends the info to the report share
@@ -62,7 +58,6 @@ Param (
     [System.String]$ArcRemoteShare,
     [Parameter(Mandatory = $true)]
     [System.String]$ReportServerFQDN,
-    [System.String]$AgentProxy,
     [switch]$AssessOnly
 )
 
@@ -83,6 +78,7 @@ $ResourceGroup = $arcInfo.ResourceGroup
 $location = $arcInfo.Location
 $PrivateLinkScopeId = $arcInfo.PrivateLinkScopeId
 $NoEncryption =[System.Convert]::ToBoolean($arcInfo.NoEncryption)
+$AgentProxy = $arcInfo.AgentProxy
 
 $tags = @{ # Tags to be added to the Arc servers
     DeployedBy  = "GPO"
@@ -157,13 +153,13 @@ Function Install-ArcAgent {
     }
 
     # If no local msi found, downloads it from the network share
-    if (-not (Test-Path "$env:TEMP\AzureConnectedMachineAgent.msi" -ErrorAction SilentlyContinue)) {
-        Copy-Item -Path "$SourceFilesFullPath\AzureConnectedMachineAgent.msi" -Destination "$env:TEMP" -Force
+    if (-not (Test-Path "$env:LOCALAPPDATA\AzureConnectedMachineAgent.msi" -ErrorAction SilentlyContinue)) {
+        Copy-Item -Path "$SourceFilesFullPath\AzureConnectedMachineAgent.msi" -Destination "$env:LOCALAPPDATA" -Force
     }
 
     Write-Log -msg "Installing Azure Connected Machine Agent" -msgtype INFO
     Set-Location $workfolder
-    $exitCode = (Start-Process -FilePath msiexec.exe -ArgumentList @("/i", "$env:TEMP\AzureConnectedMachineAgent.msi" , "/l*v", "Azcmagentinstallationlog.txt", "/qn") -Wait -Passthru).ExitCode
+    $exitCode = (Start-Process -FilePath msiexec.exe -ArgumentList @("/i", "$env:LOCALAPPDATA\AzureConnectedMachineAgent.msi" , "/l*v", "Azcmagentinstallationlog.txt", "/qn") -Wait -Passthru).ExitCode
     $message = (net helpmsg $exitCode)
     if ($exitCode -ne 0) {
 
@@ -210,13 +206,13 @@ Function Update-ArcAgentVersion {
     #Compare versions
 
 
-    if ($LocalAgentVersion -ne $NetworkShareVersion) {
+    if ($LocalAgentVersion -lt $NetworkShareVersion) {
         # New Agent Version Found
         Write-Log -msg "New Agent version found in network share folder: $($NetworkShareVersion.ToString()) , local version is $($LocalAgentVersion.ToString()). Executing update ..." -msgtype WARNING
     
 
         # Download the package
-        Copy-Item -Path "$SourceFilesFullPath\AzureConnectedMachineAgent.msi" -Destination "$env:TEMP" -Force
+        Copy-Item -Path "$SourceFilesFullPath\AzureConnectedMachineAgent.msi" -Destination "$env:LOCALAPPDATA" -Force
     
         #Install the package
         Update-ArcAgent
@@ -237,7 +233,7 @@ Function Update-ArcAgent {
 
     Write-Log -msg "Updating Azure Connected Machine Agent" -msgtype INFO
     Set-Location $workfolder
-    $exitCode = (Start-Process -FilePath msiexec.exe -ArgumentList @("/i", "$env:TEMP\AzureConnectedMachineAgent.msi" , "/l*v", "Azcmagentupdatesetup.txt", "/qn") -Wait -Passthru).ExitCode
+    $exitCode = (Start-Process -FilePath msiexec.exe -ArgumentList @("/i", "$env:LOCALAPPDATA\AzureConnectedMachineAgent.msi" , "/l*v", "Azcmagentupdatesetup.txt", "/qn") -Wait -Passthru).ExitCode
     $message = (net helpmsg $exitCode)
     if ($exitCode -ne 0) {
 
