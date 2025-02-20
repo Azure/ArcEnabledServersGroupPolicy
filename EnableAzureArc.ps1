@@ -35,10 +35,6 @@
 
 .PARAMETER ReportServerFQDN
    FQDN of the Server that will act as report Server (and source files)
-   
-.PARAMETER AgentProxy
-   Url of the proxy in case is used. 
-   e.g. : https://proxy.contoso.com:8080
 
 .PARAMETER AssessOnly
    Switch parameter that makes script work in Assess mode.
@@ -46,9 +42,9 @@
    Machines will only report if their prerequesites are met or not to the report share
 
 .EXAMPLE
-   This example onboards machines in Azure Arc using the proxy specified
+   This example onboards machines in Azure Arc 
    
-   .\EnableAzureArc.ps1 -ArcRemoteShare AzureArcOnBoard -AgentProxy https://proxy.contoso.com:8080
+   .\EnableAzureArc.ps1 -ArcRemoteShare AzureArcOnBoard 
 
 .EXAMPLE
    This example assesses machines Azure Arc prerequisites and sends the info to the report share
@@ -62,7 +58,6 @@ Param (
     [System.String]$ArcRemoteShare,
     [Parameter(Mandatory = $true)]
     [System.String]$ReportServerFQDN,
-    [System.String]$AgentProxy,
     [switch]$AssessOnly
 )
 
@@ -82,6 +77,7 @@ $subscriptionid = $arcInfo.SubscriptionId
 $ResourceGroup = $arcInfo.ResourceGroup
 $location = $arcInfo.Location
 $PrivateLinkScopeId = $arcInfo.PrivateLinkScopeId
+$AgentProxy = $arcInfo.AgentProxy
 
 $tags = @{ # Tags to be added to the Arc servers
     DeployedBy  = "GPO"
