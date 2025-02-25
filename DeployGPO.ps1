@@ -65,7 +65,7 @@ Param (
     [System.String]$AgentProxy,
 
     [Parameter(Mandatory = $False)]
-    [switch]$NoEncryption = $False,
+    [switch]$UseEncryption = $True,
 
     [Hashtable]$Tags,
 
@@ -73,9 +73,9 @@ Param (
     [switch]$AssessOnly
 )
 
-if($NoEncryption){
+if(-not $UseEncryption){
     $prompt = @"
-NoEncryption switch specified. Please be aware that the secret will only be encoded in base64
+UseEncryption=false specified. Please be aware that the secret will only be encoded in base64
 and the secret will be easily decodable to anyone with read permissions to the remote share.  
 Do you wish to continue with base64 encoding? (y/n)
 "@
@@ -225,7 +225,7 @@ catch { Write-Host "The Group Policy could not be created:`n$(($_.Exception).Mes
 # Encrypting the ServicePrincipalSecret to be decrypted only by the Domain Controllers and the Domain Computers security groups
 
 $encryptedSecret = [Convert]::ToBase64String([char[]]"$ServicePrincipalSecret")
-if (-not $NoEncryption){
+if ($UseEncryption){
     $DomainComputersSID = "SID=" + $DomainComputersSID
     $DomainControllersSID = "SID=" + $DomainControllersSID
     $descriptor = @($DomainComputersSID, $DomainControllersSID) -join " OR "
@@ -270,7 +270,7 @@ try {
         "TenantId" = "$TenantId"
         "PrivateLinkScopeId" = "$PrivateLinkScopeId"
         "Tags" = $tags
-        "NoEncryption" = "$NoEncryption"
+        "UseEncryption" = "$UseEncryption"
         "AgentProxy"="$AgentProxy"
     }
     $infoTableJSON = $infoTable | ConvertTo-Json -Compress
