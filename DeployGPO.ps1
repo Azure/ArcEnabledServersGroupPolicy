@@ -183,30 +183,14 @@ try {
 }
 catch { Write-Host "Could not modify Scheduled task:`n$(($_.Exception).Message)" -ForegroundColor Red ; exit }
 
+Write-Host "`nAdding ReportServerFQDN $ReportServerFQDN to the scheduled task ..." -ForegroundColor Green
 
-#Add proxy server information if neccessary
-
-if ($PSBoundParameters.ContainsKey('AgentProxy')) {
-    Write-Host "`nProxy was selected. Adding proxy $AgentProxy to the scheduled task ..." -ForegroundColor Green
-
-    try {
-        $xmlcontent = Get-Content -Path $ScheduledTaskfile -ErrorAction Stop
-        ($xmlcontent -replace "EnableAzureArc.ps1 -ArcRemoteShare", "EnableAzureArc.ps1 -ReportServerFQDN $ReportServerFQDN -AgentProxy $AgentProxy -ArcRemoteShare") | Out-File $ScheduledTaskfile -Encoding utf8 -Force -ErrorAction Stop
-        Write-Host "Proxy information was successfully added to the scheduled task" -ForegroundColor Green
-    }
-    catch { Write-Host "Could not add Proxy Information:`n$(($_.Exception).Message)" -ForegroundColor Red ; exit }
-    
-} 
-else {
-    Write-Host "`nAdding ReportServerFQDN $ReportServerFQDN to the scheduled task ..." -ForegroundColor Green
-
-    try {
-        $xmlcontent = Get-Content -Path $ScheduledTaskfile -ErrorAction Stop
-        ($xmlcontent -replace "EnableAzureArc.ps1 -ArcRemoteShare", "EnableAzureArc.ps1 -ReportServerFQDN $ReportServerFQDN -ArcRemoteShare") | Out-File $ScheduledTaskfile -Encoding utf8 -Force -ErrorAction Stop
-        Write-Host "ReportServerFQDN was successfully added to the scheduled task" -ForegroundColor Green
-    }
-    catch { Write-Host "Could not add ReportServerFQDN:`n$(($_.Exception).Message)" -ForegroundColor Red ; exit }
+try {
+    $xmlcontent = Get-Content -Path $ScheduledTaskfile -ErrorAction Stop
+    ($xmlcontent -replace "EnableAzureArc.ps1 -ArcRemoteShare", "EnableAzureArc.ps1 -ReportServerFQDN $ReportServerFQDN -ArcRemoteShare") | Out-File $ScheduledTaskfile -Encoding utf8 -Force -ErrorAction Stop
+    Write-Host "ReportServerFQDN was successfully added to the scheduled task" -ForegroundColor Green
 }
+catch { Write-Host "Could not add ReportServerFQDN:`n$(($_.Exception).Message)" -ForegroundColor Red ; exit }
 
 #endregion
 
@@ -258,7 +242,7 @@ try {
         Write-Host "Install file `'AzureConnectedMachineAgent.msi`' successfully copied to $AzureArcDeployPath" -ForegroundColor Green
     }
 
-    $infoTable = @{"ServicePrincipalClientId"="$ServicePrincipalClientId";"SubscriptionId"="$SubscriptionId";"ResourceGroup"="$ResourceGroup";"Location"="$Location";"TenantId"="$TenantId";"PrivateLinkScopeId"="$PrivateLinkScopeId"; "Tags"=$tags}
+    $infoTable = @{"ServicePrincipalClientId"="$ServicePrincipalClientId";"SubscriptionId"="$SubscriptionId";"ResourceGroup"="$ResourceGroup";"Location"="$Location";"TenantId"="$TenantId";"PrivateLinkScopeId"="$PrivateLinkScopeId"; "AgentProxy"="$AgentProxy"; "Tags"=$tags}
     $infoTableJSON = $infoTable | ConvertTo-Json -Compress
     
     if (Test-Path "$AzureArcDeployPath\ArcInfo.json" -ErrorAction SilentlyContinue) {
