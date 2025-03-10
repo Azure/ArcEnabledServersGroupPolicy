@@ -38,7 +38,7 @@ More information can be found [here](https://learn.microsoft.com/en-us/azure/azu
 - Execute the deployment script *DeployGPO.ps1*, with the following syntax:
   
         .\DeployGPO.ps1 -DomainFQDN contoso.com -ReportServerFQDN Server.contoso.com -ArcRemoteShare AzureArcOnBoard -ServicePrincipalSecret $ServicePrincipalSecret 
-       -ServicePrincipalClientId $ServicePrincipalClientId -SubscriptionId $SubscriptionId --ResourceGroup $ResourceGroup -Location $Location -TenantId $TenantId 
+       -ServicePrincipalClientId $ServicePrincipalClientId -SubscriptionId $SubscriptionId -ResourceGroup $ResourceGroup -Location $Location -TenantId $TenantId 
        [-AgentProxy $AgentProxy]
 
     Where:
