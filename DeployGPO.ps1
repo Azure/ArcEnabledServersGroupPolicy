@@ -70,9 +70,6 @@ Param (
     
     [Parameter(Mandatory = $False)]
     [System.String]$PrivateLinkScopeId,
-    
-    [Parameter(Mandatory = $False)]
-    [switch]$UseEncryption = $True,
 
     [Hashtable]$Tags,
 
@@ -259,7 +256,6 @@ try {
         "TenantId" = "$TenantId"
         "PrivateLinkScopeId" = "$PrivateLinkScopeId"
         "Tags" = $tags
-        "UseEncryption" = "$UseEncryption"
         "AgentProxy"="$AgentProxy"
         "GatewayId"="$GatewayId"
     }
