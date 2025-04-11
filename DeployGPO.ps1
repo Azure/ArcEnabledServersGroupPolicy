@@ -62,11 +62,20 @@ Param (
     [Parameter(Mandatory = $True)]
     [System.String]$ArcRemoteShare,
 
+    [Parameter(Mandatory = $False)]
     [System.String]$AgentProxy,
+
+    [Parameter(Mandatory = $False)]
+    [System.String]$GatewayId,
+    
+    [Parameter(Mandatory = $False)]
+    [System.String]$PrivateLinkScopeId,
+    
+    [Parameter(Mandatory = $False)]
+    [switch]$UseEncryption = $True,
 
     [Hashtable]$Tags,
 
-    [System.String]$PrivateLinkScopeId,
     [switch]$AssessOnly
 )
 
@@ -242,7 +251,18 @@ try {
         Write-Host "Install file `'AzureConnectedMachineAgent.msi`' successfully copied to $AzureArcDeployPath" -ForegroundColor Green
     }
 
-    $infoTable = @{"ServicePrincipalClientId"="$ServicePrincipalClientId";"SubscriptionId"="$SubscriptionId";"ResourceGroup"="$ResourceGroup";"Location"="$Location";"TenantId"="$TenantId";"PrivateLinkScopeId"="$PrivateLinkScopeId"; "AgentProxy"="$AgentProxy"; "Tags"=$tags}
+    $infoTable = @{
+        "ServicePrincipalClientId" = "$ServicePrincipalClientId"
+        "SubscriptionId" = "$SubscriptionId"
+        "ResourceGroup" = "$ResourceGroup"
+        "Location" = "$Location"
+        "TenantId" = "$TenantId"
+        "PrivateLinkScopeId" = "$PrivateLinkScopeId"
+        "Tags" = $tags
+        "UseEncryption" = "$UseEncryption"
+        "AgentProxy"="$AgentProxy"
+        "GatewayId"="$GatewayId"
+    }
     $infoTableJSON = $infoTable | ConvertTo-Json -Compress
     
     if (Test-Path "$AzureArcDeployPath\ArcInfo.json" -ErrorAction SilentlyContinue) {

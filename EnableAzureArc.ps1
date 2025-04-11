@@ -78,6 +78,7 @@ $ResourceGroup = $arcInfo.ResourceGroup
 $location = $arcInfo.Location
 $PrivateLinkScopeId = $arcInfo.PrivateLinkScopeId
 $AgentProxy = $arcInfo.AgentProxy
+$GatewayId = $arcInfo.GatewayId
 
 $tags = @{ # Tags to be added to the Arc servers
     DeployedBy  = "GPO"
@@ -287,16 +288,38 @@ Function Connect-ArcAgent {
         $Proxyconf = & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" config set proxy.url $AgentProxy #Proxy Configured
     }
 
-    # if private link scope is specified
+    $azcmagentPath = "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe"
+    $baseArgs = @(
+        "connect",
+        "--resource-name", $env:computername,
+        "--service-principal-id", $servicePrincipalClientId,
+        "--service-principal-secret", $sps,
+        "--resource-group", $ResourceGroup,
+        "--tenant-id", $tenantid,
+        "--location", $location,
+        "--subscription-id", $subscriptionid,
+        "--cloud", "AzureCloud",
+        "--tags", $FinalTag,
+        "--correlation-id", "478b97c2-9310-465a-87df-f21e66c2b248"
+    )
+
     if ($PrivateLinkScopeId) {
+        $baseArgs += "--private-link-scope"
+        $baseArgs += $PrivateLinkScopeId
+
+        # Append proxy bypass if AgentProxy is not empty
         if ($AgentProxy -ne "") {
-            & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" config set proxy.bypass "Arc" #Bypass proxy for Arc services (his.arc.azure.com, guestconfiguration.azure.com, guestnotificationservice.azure.com, servicebus.windows.net)
+            & "$azcmagentPath" config set proxy.bypass "Arc" # Bypass proxy for Arc services
         }
-        $ConnectionOutput = & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect --resource-name $env:computername --service-principal-id $servicePrincipalClientId --service-principal-secret $sps --resource-group $ResourceGroup --tenant-id $tenantid --location $location --subscription-id $subscriptionid --cloud AzureCloud --tags $FinalTag --private-link-scope $PrivateLinkScopeId --correlation-id "478b97c2-9310-465a-87df-f21e66c2b248"
     }
-    else {
-        $ConnectionOutput = & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect --resource-name $env:computername --service-principal-id $servicePrincipalClientId --service-principal-secret $sps --resource-group $ResourceGroup --tenant-id $tenantid --location $location --subscription-id $subscriptionid --cloud AzureCloud --tags $FinalTag --correlation-id "478b97c2-9310-465a-87df-f21e66c2b248"
+
+    if ($GatewayId) {
+        $baseArgs += "--gateway-id"
+        $baseArgs += $GatewayId
     }
+
+    # Execute the command
+    $ConnectionOutput = & "$azcmagentPath" @baseArgs
 
     if ($LastExitCode -eq 0) {
         Write-Log -msg "Agent connected successfully!. To view your onboarded server(s), navigate to https://ms.portal.azure.com/#blade/Microsoft_Azure_HybridCompute/AzureArcCenterBlade/servers" -msgtype INFO
