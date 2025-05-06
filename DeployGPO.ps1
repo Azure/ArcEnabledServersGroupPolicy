@@ -64,7 +64,7 @@ Param (
 
     [System.String]$AgentProxy,
 
-    [Hashtable]$Tags,
+    [System.String]$Tags,
 
     [System.String]$PrivateLinkScopeId,
     [switch]$AssessOnly
