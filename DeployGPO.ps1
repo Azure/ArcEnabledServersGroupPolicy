@@ -62,14 +62,19 @@ Param (
     [Parameter(Mandatory = $True)]
     [System.String]$ArcRemoteShare,
 
+    [Parameter(Mandatory = $False)]
     [System.String]$AgentProxy,
 
     [Parameter(Mandatory = $False)]
     [switch]$UseEncryption = $True,
+    
+    [System.String]$GatewayId,
+    
+    [Parameter(Mandatory = $False)]
+    [System.String]$PrivateLinkScopeId,
 
     [Hashtable]$Tags,
 
-    [System.String]$PrivateLinkScopeId,
     [switch]$AssessOnly
 )
 
@@ -272,6 +277,7 @@ try {
         "Tags" = $tags
         "UseEncryption" = "$UseEncryption"
         "AgentProxy"="$AgentProxy"
+        "GatewayId"="$GatewayId"
     }
     $infoTableJSON = $infoTable | ConvertTo-Json -Compress
     
