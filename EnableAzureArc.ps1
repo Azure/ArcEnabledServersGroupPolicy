@@ -77,6 +77,7 @@ $subscriptionid = $arcInfo.SubscriptionId
 $ResourceGroup = $arcInfo.ResourceGroup
 $location = $arcInfo.Location
 $PrivateLinkScopeId = $arcInfo.PrivateLinkScopeId
+$UseEncryption =[System.Convert]::ToBoolean($arcInfo.UseEncryption)
 $AgentProxy = $arcInfo.AgentProxy
 $GatewayId = $arcInfo.GatewayId
 
@@ -246,7 +247,14 @@ Function Update-ArcAgent {
 
 }
 Function Get-ServicePrincipalSecret {
+    if(-not $UseEncryption){
+        Write-Log -msg "Using base64 to decrypt" -msgtype INFO
+        $encryptedSecret = Get-Content (Join-Path $SourceFilesFullPath encryptedServicePrincipalSecret)
+        $sps = -join ( [Convert]::FromBase64String($encryptedSecret) -as [char[]])
+        return $sps
+    }
     try {
+        Write-Log -msg "Using DPAPI to decrypt" -msgtype INFO
         Copy-Item (Join-Path $SourceFilesFullPath "AzureArcDeployment.psm1") $workfolder -Force
         Import-Module (Join-Path $workfolder "AzureArcDeployment.psm1")
         $encryptedSecret = Get-Content (Join-Path $SourceFilesFullPath encryptedServicePrincipalSecret)
