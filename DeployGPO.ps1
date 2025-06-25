@@ -117,27 +117,23 @@ $Acl = Get-ACL -Path $AzureArcLoggingPath
 $Acl.SetAccessRuleProtection($True, $True)
 Set-Acl -Path $AzureArcLoggingPath -AclObject $Acl
 
+# Fetching Domain Information
+$DomainSID = (Get-ADDomain $DomainFQDN).DomainSID.Value
+$DomainComputersSID = $DomainSID + '-515'
+$DomainControllersSID = $DomainSID + '-516'
 
-
-#Add Access to Domain Computers and Domain Controllers
-$DomainNetbios = (Get-ADDomain $DomainFQDN).NetBIOSName
-$DomainComputersSID = (Get-ADDomain).DomainSID.Value + '-515'
-$DomainComputersName = (Get-ADGroup -Filter "SID -eq `'$DomainComputersSID`'").Name
-$DomainControllersSID = (Get-ADDomain).DomainSID.Value + '-516'
-$DomainControllersName = (Get-ADGroup -Filter "SID -eq `'$DomainControllersSID`'").Name
-
-
-$identity = "$DomainNetbios\$DomainComputersName"
-$identity2 = "$DomainNetbios\$DomainControllersName"
-
+# Convert SIDs to SecurityIdentifier objects
+$DomainComputersSIDObj = New-Object System.Security.Principal.SecurityIdentifier($DomainComputersSID)
+$DomainControllersSIDObj = New-Object System.Security.Principal.SecurityIdentifier($DomainControllersSID)
 
 #Deploy Path
 $NewAcl = Get-ACL -Path $AzureArcDeployPath
 $fileSystemAccessRules = 
-@(   
-    [System.Security.AccessControl.FileSystemAccessRule]::new($identity, 'ReadandExecute', "ContainerInherit,ObjectInherit", 'None', 'Allow')
-    [System.Security.AccessControl.FileSystemAccessRule]::new($identity2, 'ReadandExecute', "ContainerInherit,ObjectInherit", 'None', 'Allow')  
+@(
+    [System.Security.AccessControl.FileSystemAccessRule]::new($DomainComputersSIDObj, 'ReadAndExecute', "ContainerInherit,ObjectInherit", 'None', 'Allow'),
+    [System.Security.AccessControl.FileSystemAccessRule]::new($DomainControllersSIDObj, 'ReadAndExecute', "ContainerInherit,ObjectInherit", 'None', 'Allow')
 )
+
 foreach ($fileSystemAccessRule in $fileSystemAccessRules) {
 
     $NewAcl.SetAccessRule($fileSystemAccessRule)
@@ -149,8 +145,8 @@ foreach ($fileSystemAccessRule in $fileSystemAccessRules) {
 $NewAcl = Get-ACL -Path $AzureArcLoggingPath
 $fileSystemAccessRules = 
 @(   
-    [System.Security.AccessControl.FileSystemAccessRule]::new($identity, 'ReadandExecute,Write,Modify', "ContainerInherit,ObjectInherit", 'None', 'Allow')
-    [System.Security.AccessControl.FileSystemAccessRule]::new($identity2, 'ReadandExecute,Write,Modify', "ContainerInherit,ObjectInherit", 'None', 'Allow')  
+    [System.Security.AccessControl.FileSystemAccessRule]::new($DomainComputersSIDObj, 'ReadandExecute,Write,Modify', "ContainerInherit,ObjectInherit", 'None', 'Allow')
+    [System.Security.AccessControl.FileSystemAccessRule]::new($DomainControllersSIDObj, 'ReadandExecute,Write,Modify', "ContainerInherit,ObjectInherit", 'None', 'Allow')  
 )
 foreach ($fileSystemAccessRule in $fileSystemAccessRules) {
     $NewAcl.SetAccessRule($fileSystemAccessRule)
