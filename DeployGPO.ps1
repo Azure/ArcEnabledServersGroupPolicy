@@ -117,33 +117,28 @@ $Acl = Get-ACL -Path $AzureArcLoggingPath
 $Acl.SetAccessRuleProtection($True, $True)
 Set-Acl -Path $AzureArcLoggingPath -AclObject $Acl
 
+# Fetching Domain Information
+$DomainSID = (Get-ADDomain $DomainFQDN).DomainSID.Value
+$DomainComputersSID = $DomainSID + '-515'
+$DomainControllersSID = $DomainSID + '-516'
+$ReadOnlyDomainControllersSID = $DomainSID + '-521'
+$CreatorOwnerSID = 'S-1-3-0'
 
-
-#Add Access to Domain Computers, Domain Controllers and Read-only Domain Controllers
-$DomainNetbios = (Get-ADDomain $DomainFQDN).NetBIOSName
-$DomainComputersSID = (Get-ADDomain).DomainSID.Value + '-515'
-$DomainComputersName = (Get-ADGroup -Filter "SID -eq `'$DomainComputersSID`'").Name
-$DomainControllersSID = (Get-ADDomain).DomainSID.Value + '-516'
-$DomainControllersName = (Get-ADGroup -Filter "SID -eq `'$DomainControllersSID`'").Name
-$ReadOnlyDomainControllersSID = (Get-ADDomain).DomainSID.Value + '-521'
-$ReadOnlyDomainControllersName = (Get-ADGroup -Filter "SID -eq `'$ReadOnlyDomainControllersSID`'").Name
-$CreatorOwnerSID = New-Object -TypeName System.Security.Principal.SecurityIdentifier -ArgumentList 'S-1-3-0'
-$CreatorOwnerName = $CreatorOwnerSID.Translate([System.Security.Principal.NTAccount])
-
-
-$identity = "$DomainNetbios\$DomainComputersName"
-$identity2 = "$DomainNetbios\$DomainControllersName"
-$identity3 = "$DomainNetbios\$ReadOnlyDomainControllersName"
-
+# Convert SIDs to SecurityIdentifier objects
+$DomainComputersSIDObj = New-Object System.Security.Principal.SecurityIdentifier($DomainComputersSID)
+$DomainControllersSIDObj = New-Object System.Security.Principal.SecurityIdentifier($DomainControllersSID)
+$ReadOnlyDomainControllersSIDObj = New-Object System.Security.Principal.SecurityIdentifier($ReadOnlyDomainControllersSID)
+$CreatorOwnerSIDObj = New-Object System.Security.Principal.SecurityIdentifier($CreatorOwnerSID)
 
 #Deploy Path
 $NewAcl = Get-ACL -Path $AzureArcDeployPath
 $fileSystemAccessRules = 
-@(   
-    [System.Security.AccessControl.FileSystemAccessRule]::new($identity, 'ReadandExecute', "ContainerInherit,ObjectInherit", 'None', 'Allow')
-    [System.Security.AccessControl.FileSystemAccessRule]::new($identity2, 'ReadandExecute', "ContainerInherit,ObjectInherit", 'None', 'Allow')
-    [System.Security.AccessControl.FileSystemAccessRule]::new($identity3, 'ReadandExecute', "ContainerInherit,ObjectInherit", 'None', 'Allow')
+@(
+    [System.Security.AccessControl.FileSystemAccessRule]::new($DomainComputersSIDObj, 'ReadAndExecute', "ContainerInherit,ObjectInherit", 'None', 'Allow'),
+    [System.Security.AccessControl.FileSystemAccessRule]::new($DomainControllersSIDObj, 'ReadAndExecute', "ContainerInherit,ObjectInherit", 'None', 'Allow')
+    [System.Security.AccessControl.FileSystemAccessRule]::new($ReadOnlyDomainControllersSIDObj, 'ReadAndExecute', "ContainerInherit,ObjectInherit", 'None', 'Allow')
 )
+
 foreach ($fileSystemAccessRule in $fileSystemAccessRules) {
 
     $NewAcl.SetAccessRule($fileSystemAccessRule)
@@ -155,10 +150,10 @@ foreach ($fileSystemAccessRule in $fileSystemAccessRules) {
 $NewAcl = Get-ACL -Path $AzureArcLoggingPath
 $fileSystemAccessRules = 
 @(   
-    [System.Security.AccessControl.FileSystemAccessRule]::new($identity, 'ReadandExecute,CreateFiles,CreateDirectories', "ContainerInherit", 'None', 'Allow')
-    [System.Security.AccessControl.FileSystemAccessRule]::new($identity2, 'ReadandExecute,CreateFiles,CreateDirectories', "ContainerInherit", 'None', 'Allow')
-    [System.Security.AccessControl.FileSystemAccessRule]::new($identity3, 'ReadandExecute,CreateFiles,CreateDirectories', "ContainerInherit", 'None', 'Allow')
-    [System.Security.AccessControl.FileSystemAccessRule]::new($CreatorOwnerName, 'ReadandExecute,Write,Modify', "ObjectInherit", 'None', 'Allow')
+    [System.Security.AccessControl.FileSystemAccessRule]::new($DomainComputersSIDObj, 'ReadandExecute,CreateFiles,CreateDirectories', "ContainerInherit", 'None', 'Allow')
+    [System.Security.AccessControl.FileSystemAccessRule]::new($DomainControllersSIDObj, 'ReadandExecute,CreateFiles,CreateDirectories', "ContainerInherit", 'None', 'Allow')
+    [System.Security.AccessControl.FileSystemAccessRule]::new($ReadOnlyDomainControllersSIDObj, 'ReadandExecute,CreateFiles,CreateDirectories', "ContainerInherit", 'None', 'Allow')
+    [System.Security.AccessControl.FileSystemAccessRule]::new($CreatorOwnerSIDObj, 'ReadandExecute,Write,Modify', "ObjectInherit", 'None', 'Allow')
 )
 foreach ($fileSystemAccessRule in $fileSystemAccessRules) {
     $NewAcl.SetAccessRule($fileSystemAccessRule)
