@@ -22,7 +22,8 @@ More information can be found [here](https://learn.microsoft.com/en-us/azure/azu
 
 - Create a *Network Share*,e.g. *AzureArcOnboard* that will be used for deployment and reporting files, with the following permissions:
 
-  *Domain Controllers*, *Domain Computers* and *Domain Admins*: Change Permissions
+  *Domain Controllers*, *Domain Computers*: Change Permissions
+  *Domain Admins*: Full Control Permissions
 
  
 - Copy the *'AzureConnectedMachineAgent.msi'* file to the shared folder.
