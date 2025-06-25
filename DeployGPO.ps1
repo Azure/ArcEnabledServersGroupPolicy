@@ -121,10 +121,14 @@ Set-Acl -Path $AzureArcLoggingPath -AclObject $Acl
 $DomainSID = (Get-ADDomain $DomainFQDN).DomainSID.Value
 $DomainComputersSID = $DomainSID + '-515'
 $DomainControllersSID = $DomainSID + '-516'
+$ReadOnlyDomainControllersSID = $DomainSID + '-521'
+$CreatorOwnerSID = 'S-1-3-0'
 
 # Convert SIDs to SecurityIdentifier objects
 $DomainComputersSIDObj = New-Object System.Security.Principal.SecurityIdentifier($DomainComputersSID)
 $DomainControllersSIDObj = New-Object System.Security.Principal.SecurityIdentifier($DomainControllersSID)
+$ReadOnlyDomainControllersSIDObj = New-Object System.Security.Principal.SecurityIdentifier($ReadOnlyDomainControllersSID)
+$CreatorOwnerSIDObj = New-Object System.Security.Principal.SecurityIdentifier($CreatorOwnerSID)
 
 #Deploy Path
 $NewAcl = Get-ACL -Path $AzureArcDeployPath
@@ -132,6 +136,7 @@ $fileSystemAccessRules =
 @(
     [System.Security.AccessControl.FileSystemAccessRule]::new($DomainComputersSIDObj, 'ReadAndExecute', "ContainerInherit,ObjectInherit", 'None', 'Allow'),
     [System.Security.AccessControl.FileSystemAccessRule]::new($DomainControllersSIDObj, 'ReadAndExecute', "ContainerInherit,ObjectInherit", 'None', 'Allow')
+    [System.Security.AccessControl.FileSystemAccessRule]::new($ReadOnlyDomainControllersSIDObj, 'ReadAndExecute', "ContainerInherit,ObjectInherit", 'None', 'Allow')
 )
 
 foreach ($fileSystemAccessRule in $fileSystemAccessRules) {
@@ -145,8 +150,10 @@ foreach ($fileSystemAccessRule in $fileSystemAccessRules) {
 $NewAcl = Get-ACL -Path $AzureArcLoggingPath
 $fileSystemAccessRules = 
 @(   
-    [System.Security.AccessControl.FileSystemAccessRule]::new($DomainComputersSIDObj, 'ReadandExecute,Write,Modify', "ContainerInherit,ObjectInherit", 'None', 'Allow')
-    [System.Security.AccessControl.FileSystemAccessRule]::new($DomainControllersSIDObj, 'ReadandExecute,Write,Modify', "ContainerInherit,ObjectInherit", 'None', 'Allow')  
+    [System.Security.AccessControl.FileSystemAccessRule]::new($DomainComputersSIDObj, 'ReadandExecute,CreateFiles,CreateDirectories', "ContainerInherit", 'None', 'Allow')
+    [System.Security.AccessControl.FileSystemAccessRule]::new($DomainControllersSIDObj, 'ReadandExecute,CreateFiles,CreateDirectories', "ContainerInherit", 'None', 'Allow')
+    [System.Security.AccessControl.FileSystemAccessRule]::new($ReadOnlyDomainControllersSIDObj, 'ReadandExecute,CreateFiles,CreateDirectories', "ContainerInherit", 'None', 'Allow')
+    [System.Security.AccessControl.FileSystemAccessRule]::new($CreatorOwnerSIDObj, 'ReadandExecute,Write,Modify', "ObjectInherit", 'None', 'Allow')
 )
 foreach ($fileSystemAccessRule in $fileSystemAccessRules) {
     $NewAcl.SetAccessRule($fileSystemAccessRule)
@@ -207,11 +214,12 @@ try {
 catch { Write-Host "The Group Policy could not be created:`n$(($_.Exception).Message)" -ForegroundColor Red ; break }
 
 
-# Encrypting the ServicePrincipalSecret to be decrypted only by the Domain Controllers and the Domain Computers security groups
+# Encrypting the ServicePrincipalSecret to be decrypted only by the Domain Controllers, Read-only Domain Controllers and Domain Computers security groups
 
 $DomainComputersSID = "SID=" + $DomainComputersSID
 $DomainControllersSID = "SID=" + $DomainControllersSID
-$descriptor = @($DomainComputersSID, $DomainControllersSID) -join " OR "
+$ReadOnlyDomainControllersSID = "SID=" + $ReadOnlyDomainControllersSID
+$descriptor = @($DomainComputersSID, $DomainControllersSID, $ReadOnlyDomainControllersSID) -join " OR "
 
 Import-Module $PSScriptRoot\AzureArcDeployment.psm1
 $encryptedSecret = [DpapiNgUtil]::ProtectBase64($descriptor, $ServicePrincipalSecret)
