@@ -568,9 +568,19 @@ if ((Test-ArcService) -eq $false) {
 }
 elseif ((Test-ArcAgentOnboarded) -eq $false) {
     # The agent is installed (for example by the in-box AzureArcSetup feature) but is not
-    # connected to Azure. Connect it now so the machine actually shows up in Azure instead of
-    # the task completing successfully while the server stays unmanaged.
-    Write-Log -msg "Agent is installed but not connected to Azure. Starting connection ..." -msgtype WARNING
+    # connected to Azure. Bring it up to the expected version, then connect it, so the machine
+    # actually shows up in Azure instead of the task completing while the server stays unmanaged.
+    Write-Log -msg "Agent is installed but not connected to Azure. Updating agent, then connecting ..." -msgtype WARNING
+
+    # A failed or blocked update (for example the MSI can't upgrade the in-box AzureArcSetup
+    # install) must not stop us from connecting, so continue even if the update throws.
+    try {
+        Update-ArcAgentVersion
+    }
+    catch {
+        Write-Log -msg "Agent update failed: $($_.Exception.Message). Continuing to connection attempt ..." -msgtype WARNING
+    }
+
     $StartConnection = Get-Date
     if ((Connect-ArcAgent) -eq $false) {
         Get-ArcAgentErrorLogs -since $StartConnection
