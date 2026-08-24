@@ -401,6 +401,29 @@ Function Test-ArcService {
     return $true
 
 }
+Function Test-ArcAgentOnboarded {
+
+    #Reuses Get-ArcAgentstatus (which runs 'azcmagent show') to check whether the agent is
+    #actually connected to Azure. The himds service can be present without the machine being
+    #onboarded (for example when the in-box AzureArcSetup Windows feature installed the agent
+    #but never connected it), so service presence alone is not a reliable signal.
+
+    try {
+        $status = (Get-ArcAgentstatus).status
+    }
+    catch {
+        Write-Log -msg "Could not read agent status via 'azcmagent show': $($_.Exception.Message). Treating the agent as not connected." -msgtype ERROR
+        return $false
+    }
+
+    if ($status -eq "Connected") {
+        Write-Log -msg "Azure Connected Machine Agent reports status 'Connected'." -msgtype INFO
+        return $true
+    }
+
+    Write-Log -msg "Azure Connected Machine Agent reports status '$status'. Machine is not onboarded in Azure." -msgtype WARNING
+    return $false
+}
 Function Write-Log {
     Param (
         [System.String]$msg,
@@ -543,8 +566,30 @@ if ((Test-ArcService) -eq $false) {
     }
 
 }
+elseif ((Test-ArcAgentOnboarded) -eq $false) {
+    # The agent is installed (for example by the in-box AzureArcSetup feature) but is not
+    # connected to Azure. Bring it up to the expected version, then connect it, so the machine
+    # actually shows up in Azure instead of the task completing while the server stays unmanaged.
+    Write-Log -msg "Agent is installed but not connected to Azure. Updating agent, then connecting ..." -msgtype WARNING
+
+    # A failed or blocked update (for example the MSI can't upgrade the in-box AzureArcSetup
+    # install) must not stop us from connecting, so continue even if the update throws.
+    try {
+        Update-ArcAgentVersion
+    }
+    catch {
+        Write-Log -msg "Agent update failed: $($_.Exception.Message). Continuing to connection attempt ..." -msgtype WARNING
+    }
+
+    $StartConnection = Get-Date
+    if ((Connect-ArcAgent) -eq $false) {
+        Get-ArcAgentErrorLogs -since $StartConnection
+        Write-Log -msg "End of the Azure Arc Onboarding process." -msgtype INFO
+        exit
+    }
+}
 else {
-    # the Azure Hybrid Instance Metadata Service is already installed
+    # the Azure Hybrid Instance Metadata Service is already installed and connected
 
     #Ensures server has the latest Agent Version
     Update-ArcAgentVersion
@@ -565,19 +610,6 @@ if ((Test-ArcAgentConnection) -eq $false) {
         Write-Log -msg "Machine has no proxy configured" -msgtype INFO
     }
     else { Write-Log -msg "Machine has the following proxy configured: $AgentProxyConfigured" -msgtype INFO }
-    
-    if (-not (Test-Path "$env:Programdata\AzureConnectedMachineAgent\Config\agentconfig.json" )) {
-        Write-Log -msg "This machine has never been connected to Azure Arc, retrying one more time ..." -msgtype ERROR
-        $StartConnection = Get-Date
-        if ((Connect-ArcAgent) -eq $false) {
-            Get-ArcAgentErrorLogs -since $StartConnection
-        }
-        else {
-            # Machine connected successfuly
-            Write-Log -msg "End of the Azure Arc Onboarding process." -msgtype INFO
-            exit
-        }
-    }
 
     #Prepare Information
     $ArcAgentInfo = Get-ArcAgentstatus -logtype "error", "info" -loglocally  # The status is also logged locally
