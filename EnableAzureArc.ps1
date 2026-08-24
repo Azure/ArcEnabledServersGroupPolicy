@@ -610,19 +610,6 @@ if ((Test-ArcAgentConnection) -eq $false) {
         Write-Log -msg "Machine has no proxy configured" -msgtype INFO
     }
     else { Write-Log -msg "Machine has the following proxy configured: $AgentProxyConfigured" -msgtype INFO }
-    
-    if (-not (Test-Path "$env:Programdata\AzureConnectedMachineAgent\Config\agentconfig.json" )) {
-        Write-Log -msg "This machine has never been connected to Azure Arc, retrying one more time ..." -msgtype ERROR
-        $StartConnection = Get-Date
-        if ((Connect-ArcAgent) -eq $false) {
-            Get-ArcAgentErrorLogs -since $StartConnection
-        }
-        else {
-            # Machine connected successfuly
-            Write-Log -msg "End of the Azure Arc Onboarding process." -msgtype INFO
-            exit
-        }
-    }
 
     #Prepare Information
     $ArcAgentInfo = Get-ArcAgentstatus -logtype "error", "info" -loglocally  # The status is also logged locally
