@@ -144,6 +144,168 @@ Function Get-ArcAgentErrorLogs {
 
 
 }
+Function Get-EmbeddedAuthenticodeCertificates {
+    [CmdletBinding()]
+    Param (
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath
+    )
+
+    $resolvedPath = Resolve-Path -LiteralPath $FilePath -ErrorAction Stop | Select-Object -ExpandProperty Path
+
+    # Extract certificates embedded in the file's Authenticode PKCS#7 signature (leaf + intermediates).
+    # X509Chain.Build() only receives the leaf cert and must discover intermediates from the local
+    # certificate store or via AIA download. On locked-down networks where intermediates aren't cached
+    # and AIA endpoints are unreachable, Build() fails. Since the MSI's Authenticode signature already
+    # embeds these intermediates, we extract them here so they can be supplied via ExtraStore.
+    $TypeName = 'AuthenticodeCertExtractor'
+    if (-not ([System.Management.Automation.PSTypeName]$TypeName).Type) {
+        Add-Type -TypeDefinition @"
+using System;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography.X509Certificates;
+
+public static class AuthenticodeCertExtractor {
+    private const int CERT_QUERY_OBJECT_FILE                     = 0x1;
+    private const int CERT_QUERY_CONTENT_FLAG_PKCS7_SIGNED_EMBED = 0x400;
+    private const int CERT_QUERY_CONTENT_PKCS7_SIGNED_EMBED      = 10;
+    private const int CERT_QUERY_FORMAT_FLAG_ALL                 = 0xE;
+
+    [DllImport("crypt32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern bool CryptQueryObject(
+        int dwObjectType,
+        [MarshalAs(UnmanagedType.LPWStr)] string pvObject,
+        int dwExpectedContentTypeFlags,
+        int dwExpectedFormatTypeFlags,
+        int dwFlags,
+        out int pdwMsgAndCertEncodingType,
+        out int pdwContentType,
+        out int pdwFormatType,
+        out IntPtr phCertStore,
+        out IntPtr phMsg,
+        out IntPtr ppvContext);
+
+    [DllImport("crypt32.dll", SetLastError = true)]
+    private static extern bool CertCloseStore(IntPtr hCertStore, int dwFlags);
+
+    [DllImport("crypt32.dll", SetLastError = true)]
+    private static extern bool CryptMsgClose(IntPtr hCryptMsg);
+
+    [DllImport("crypt32.dll", SetLastError = true)]
+    private static extern IntPtr CertEnumCertificatesInStore(IntPtr hCertStore, IntPtr pPrevCertContext);
+
+    public static X509Certificate2Collection Extract(string filePath) {
+        IntPtr hStore, hMsg, hCtx;
+        int encType, contentType, formatType;
+
+        if (!CryptQueryObject(
+            CERT_QUERY_OBJECT_FILE, filePath,
+            CERT_QUERY_CONTENT_FLAG_PKCS7_SIGNED_EMBED,
+            CERT_QUERY_FORMAT_FLAG_ALL, 0,
+            out encType, out contentType, out formatType,
+            out hStore, out hMsg, out hCtx)) {
+            int err = Marshal.GetLastWin32Error();
+            throw new Win32Exception(err, String.Format(
+                "CryptQueryObject failed for '{0}' (0x{1:X8}): {2}",
+                filePath, err, new Win32Exception(err).Message));
+        }
+
+        try {
+            if (contentType != CERT_QUERY_CONTENT_PKCS7_SIGNED_EMBED) {
+                throw new InvalidOperationException(String.Format(
+                    "Unexpected content type {0}; expected CERT_QUERY_CONTENT_PKCS7_SIGNED_EMBED ({1}).",
+                    contentType, CERT_QUERY_CONTENT_PKCS7_SIGNED_EMBED));
+            }
+
+            var certs = new X509Certificate2Collection();
+            if (hStore != IntPtr.Zero) {
+                IntPtr pCertContext = IntPtr.Zero;
+                while ((pCertContext = CertEnumCertificatesInStore(hStore, pCertContext)) != IntPtr.Zero) {
+                    certs.Add(new X509Certificate2(pCertContext));
+                }
+            }
+            return certs;
+        } finally {
+            if (hStore != IntPtr.Zero) CertCloseStore(hStore, 0);
+            if (hMsg != IntPtr.Zero) CryptMsgClose(hMsg);
+        }
+    }
+}
+"@
+    }
+    return [AuthenticodeCertExtractor]::Extract($resolvedPath)
+}
+Function Test-MsiSignature {
+    [CmdletBinding()]
+    Param (
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath
+    )
+
+    $MSFT_ROOT_CERT_SUBJECT_PATTERN = "CN=Microsoft Root Certificate Authority*, O=Microsoft Corporation, L=Redmond, S=Washington, C=US"
+
+    Write-Verbose -Message "Validating MSI signature for: $FilePath" -Verbose
+
+    if (-not (Test-Path $FilePath)) {
+        throw "File not found for signature validation: $FilePath"
+    }
+
+    try {
+        $signature = Get-AuthenticodeSignature -FilePath $FilePath
+
+        if (-not $signature) {
+            throw "Failed to get MSI signature"
+        }
+
+        if ($signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid) {
+            throw "Signature not valid: Status: $($signature.Status), StatusMessage: $($signature.StatusMessage)"
+        }
+
+        $cert = $signature.SignerCertificate
+        if (-not $cert) {
+            throw "No signing certificate found"
+        }
+
+        # Extract certificates embedded in the Authenticode signature to supply as intermediates.
+        # This ensures chain building succeeds even on locked-down networks where intermediate
+        # CA certs are not in the local store and AIA download endpoints are unreachable.
+        $embeddedCerts = $null
+        try {
+            $embeddedCerts = Get-EmbeddedAuthenticodeCertificates -FilePath $FilePath
+        }
+        catch {
+            Write-Verbose -Message "Unable to extract embedded Authenticode certificates: $_" -Verbose
+        }
+
+        $chain = New-Object System.Security.Cryptography.X509Certificates.X509Chain
+        $chain.ChainPolicy.RevocationMode = [System.Security.Cryptography.X509Certificates.X509RevocationMode]::NoCheck
+        # Allow expired certificates in the chain to maintain compatibility with older azcmagent versions. Get-AuthenticodeSignature already verified the
+        # signature is valid (including timestamp checks for expired-but-timestamped certs). The
+        # chain validation here only needs to confirm the root CA is Microsoft's.
+        $chain.ChainPolicy.VerificationFlags = [System.Security.Cryptography.X509Certificates.X509VerificationFlags]::IgnoreNotTimeValid
+        if ($embeddedCerts -and $embeddedCerts.Count -gt 0) {
+            $chain.ChainPolicy.ExtraStore.AddRange($embeddedCerts)
+        }
+
+        if (-not $chain.Build($cert)) {
+            $chainErrors = ($chain.ChainStatus | ForEach-Object { $_.StatusInformation }) -join '; '
+            throw "Certificate chain validation failed: $chainErrors"
+        }
+
+        Write-Verbose -Message "Certificate chain validation succeeded" -Verbose
+
+        $rootCert = $chain.ChainElements[$chain.ChainElements.Count - 1].Certificate
+        if (-not ($rootCert.Subject -like $MSFT_ROOT_CERT_SUBJECT_PATTERN)) {
+            throw "MSI is not signed by a trusted Microsoft root certificate. Found root: $($rootCert.Subject)"
+        }
+
+        Write-Verbose -Message "MSI signature validation completed successfully" -Verbose
+    }
+    catch {
+        throw "Error validating signature of '$FilePath': $($_.Exception.Message)"
+    }
+}
 Function Install-ArcAgent {
 
     # Install the package
@@ -156,6 +318,8 @@ Function Install-ArcAgent {
     if (-not (Test-Path "$env:LOCALAPPDATA\AzureConnectedMachineAgent.msi" -ErrorAction SilentlyContinue)) {
         Copy-Item -Path "$SourceFilesFullPath\AzureConnectedMachineAgent.msi" -Destination "$env:LOCALAPPDATA" -Force
     }
+
+    Test-MsiSignature -FilePath "$env:LOCALAPPDATA\AzureConnectedMachineAgent.msi"
 
     Write-Log -msg "Installing Azure Connected Machine Agent" -msgtype INFO
     Set-Location $workfolder
@@ -202,6 +366,7 @@ Function Update-ArcAgentVersion {
     [Version]$LocalAgentVersion = (Get-ArcAgentstatus).Agentversion
     
     #Checks network share version
+    Test-MsiSignature -FilePath "$SourceFilesFullPath\AzureConnectedMachineAgent.msi"
     [Version]$NetworkShareVersion = (Get-MsiVersion -path "$SourceFilesFullPath\AzureConnectedMachineAgent.msi")[1]
     #Compare versions
 
@@ -230,6 +395,8 @@ Function Update-ArcAgentVersion {
 Function Update-ArcAgent {
 
     # Update Agent
+
+    Test-MsiSignature -FilePath "$env:LOCALAPPDATA\AzureConnectedMachineAgent.msi"
 
     Write-Log -msg "Updating Azure Connected Machine Agent" -msgtype INFO
     Set-Location $workfolder
